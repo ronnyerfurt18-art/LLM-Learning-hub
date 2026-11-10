@@ -1,0 +1,505 @@
+{
+ "schema_version": 1,
+ "module_number": "10001",
+ "module_title": "Lernen lernen (Demo)",
+ "overview": {
+  "title": "Wirksam lernen: abrufen, verteilen, planen",
+  "paragraphs": [
+   "Dieses Demo-Modul zeigt an einem kleinen Thema, wie der Learning Hub arbeitet. Es beruht auf zwei kurzen Demo-Lehrbriefen, die mit dem Hub ausgeliefert werden.",
+   "Kurseinheit 1 behandelt Abrufübung und verteiltes Wiederholen. Kurseinheit 2 ordnet weitere Lerntechniken ein und führt zum Lernplan."
+  ],
+  "sources": [
+   {
+    "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+    "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+    "chapter": "Überblick",
+    "pdf_page": 1,
+    "pdf_page_end": 1,
+    "printed_page": "1"
+   },
+   {
+    "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+    "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+    "chapter": "Überblick",
+    "pdf_page": 1,
+    "pdf_page_end": 1,
+    "printed_page": "1"
+   }
+  ],
+  "units": [
+   {
+    "unit": 1,
+    "title": "Abrufen und verteilt wiederholen",
+    "description": "Warum aktives Abrufen und Wiederholen mit Abstand langfristig besser wirken als erneutes Lesen.",
+    "topics": [
+     "Abrufübung",
+     "Testeffekt",
+     "Vergessenskurve",
+     "Verteilungseffekt",
+     "SM-2"
+    ]
+   },
+   {
+    "unit": 2,
+    "title": "Techniken auswählen und Lernen planen",
+    "description": "Welche Lerntechniken gut belegt sind und wie daraus ein Lernplan entsteht.",
+    "topics": [
+     "Übersichtsarbeit zu Lerntechniken",
+     "Verschachteltes Üben",
+     "Selbsterklärung",
+     "Lernplan"
+    ]
+   }
+  ],
+  "learning_path": [
+   "Zuerst verstehen, warum Abrufen wirkt.",
+   "Dann die Wirkung von Abständen kennenlernen.",
+   "Weitere Techniken einordnen.",
+   "Alles in einem Lernplan zusammenführen."
+  ],
+  "big_picture": {
+   "title": "Vom Lesen zum planvollen Lernen",
+   "central_question": "Wie lernst du so, dass das Wissen bis zur Prüfung und darüber hinaus hält?",
+   "intro": "Vier Bausteine greifen ineinander: aktiv abrufen, mit Abstand wiederholen, passende Techniken wählen und alles in einen Plan bringen.",
+   "takeaway": "Abrufen zeigt, was fehlt. Abstände halten es im Gedächtnis. Der Plan sorgt dafür, dass beides regelmäßig stattfindet.",
+   "nodes": [
+    {
+     "id": "abrufen",
+     "title": "Aktiv abrufen",
+     "summary": "Wissen ohne Unterlagen aus dem Gedächtnis holen festigt es.",
+     "role": "Liefert die wirksamste Einzeltechnik und zugleich die Selbstkontrolle.",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+       "chapter": "1 Abrufübung",
+       "pdf_page": 2,
+       "pdf_page_end": 2,
+       "printed_page": "2"
+      }
+     ],
+     "lesson_ids": [
+      "ll-abrufuebung"
+     ]
+    },
+    {
+     "id": "verteilen",
+     "title": "Mit Abstand wiederholen",
+     "summary": "Verteilte Sitzungen wirken dem schnellen Vergessen entgegen.",
+     "role": "Bestimmt, wann abgerufen wird.",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+       "chapter": "2 Verteiltes Wiederholen",
+       "pdf_page": 3,
+       "pdf_page_end": 3,
+       "printed_page": "3"
+      }
+     ],
+     "lesson_ids": [
+      "ll-verteilt"
+     ]
+    },
+    {
+     "id": "techniken",
+     "title": "Techniken einordnen",
+     "summary": "Nicht jede beliebte Technik ist gut belegt.",
+     "role": "Hilft, Lernzeit auf wirksame Techniken zu lenken.",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+       "chapter": "1 Welche Techniken sich lohnen",
+       "pdf_page": 2,
+       "pdf_page_end": 2,
+       "printed_page": "2"
+      }
+     ],
+     "lesson_ids": [
+      "ll-techniken"
+     ]
+    },
+    {
+     "id": "planen",
+     "title": "Lernen planen",
+     "summary": "Ein Plan verteilt Stoff und Wiederholungen bis zur Prüfung.",
+     "role": "Führt die Techniken im Alltag zusammen.",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+       "chapter": "2 Einen Lernplan aufstellen",
+       "pdf_page": 3,
+       "pdf_page_end": 3,
+       "printed_page": "3"
+      }
+     ],
+     "lesson_ids": [
+      "ll-lernplan"
+     ]
+    }
+   ],
+   "connections": [
+    {
+     "from": "abrufen",
+     "to": "verteilen",
+     "label": "wird mit wachsenden Abständen wiederholt"
+    },
+    {
+     "from": "techniken",
+     "to": "abrufen",
+     "label": "bestätigt den hohen Nutzen"
+    },
+    {
+     "from": "techniken",
+     "to": "verteilen",
+     "label": "bestätigt den hohen Nutzen"
+    },
+    {
+     "from": "verteilen",
+     "to": "planen",
+     "label": "gibt die Wiederholungstermine vor"
+    },
+    {
+     "from": "abrufen",
+     "to": "planen",
+     "label": "eröffnet jede Lernsitzung"
+    }
+   ]
+  }
+ },
+ "lessons": [
+  {
+   "id": "ll-abrufuebung",
+   "unit": 1,
+   "title": "Abrufübung",
+   "summary": "Aktives Abrufen festigt Wissen stärker als erneutes Lesen und zeigt, was noch fehlt.",
+   "learning_goals": [
+    "Abrufübung und Testeffekt erklären.",
+    "Den Befund von Roediger und Karpicke (2006) wiedergeben.",
+    "Die Flüssigkeitsillusion beschreiben."
+   ],
+   "sections": [
+    {
+     "id": "begriff",
+     "title": "Was Abrufübung bedeutet",
+     "paragraphs": [
+      "Bei der Abrufübung holst du Wissen aktiv aus dem Gedächtnis, ohne in die Unterlagen zu schauen. Jeder erfolgreiche Abruf festigt die Erinnerung. Dieser Befund heißt Testeffekt."
+     ],
+     "bullets": [
+      "Karteikarten aus dem Kopf beantworten",
+      "Übungsfragen ohne Unterlagen lösen",
+      "Ein Thema aus dem Kopf aufschreiben"
+     ],
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+       "chapter": "1.1 Was Abrufübung bedeutet",
+       "pdf_page": 2,
+       "pdf_page_end": 2,
+       "printed_page": "2"
+      }
+     ]
+    },
+    {
+     "id": "befund",
+     "title": "Ein klassischer Befund",
+     "paragraphs": [
+      "Roediger und Karpicke (2006) verglichen wiederholtes Lesen mit einmaligem Lesen und anschließendem Abruf aus dem Gedächtnis."
+     ],
+     "table": {
+      "headers": [
+       "Zeitpunkt des Tests",
+       "Wer erinnerte mehr?"
+      ],
+      "rows": [
+       [
+        "Nach fünf Minuten",
+        "Die Lesegruppe, etwas mehr"
+       ],
+       [
+        "Nach einer Woche",
+        "Die Abrufgruppe, deutlich mehr"
+       ]
+      ]
+     },
+     "note": "Der kurzfristige Vorteil des Lesens kehrt sich langfristig um.",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+       "chapter": "1.2 Ein klassischer Befund",
+       "pdf_page": 2,
+       "pdf_page_end": 2,
+       "printed_page": "2"
+      }
+     ]
+    },
+    {
+     "id": "illusion",
+     "title": "Die Flüssigkeitsillusion",
+     "paragraphs": [
+      "Wiederholtes Lesen macht einen Text vertraut. Vertrautheit wird leicht mit Können verwechselt. Wer sich selbst abfragt, merkt sofort, was noch fehlt."
+     ],
+     "note": "Abrufübung ist zugleich Lerntechnik und Selbstkontrolle.",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+       "chapter": "1.3 Die Flüssigkeitsillusion",
+       "pdf_page": 2,
+       "pdf_page_end": 2,
+       "printed_page": "2"
+      }
+     ]
+    }
+   ],
+   "exercise_ids": [
+    "LL-E1-01",
+    "LL-E1-02",
+    "LL-E1-03",
+    "LL-E1-05"
+   ]
+  },
+  {
+   "id": "ll-verteilt",
+   "unit": 1,
+   "title": "Verteiltes Wiederholen",
+   "summary": "Wiederholungen mit wachsendem Abstand wirken dem Vergessen mit wenig Aufwand entgegen.",
+   "learning_goals": [
+    "Die Vergessenskurve beschreiben.",
+    "Den Verteilungseffekt erklären.",
+    "Das Prinzip von SM-2 erläutern."
+   ],
+   "sections": [
+    {
+     "id": "vergessenskurve",
+     "title": "Die Vergessenskurve",
+     "paragraphs": [
+      "Hermann Ebbinghaus beschrieb 1885 anhand von Selbstversuchen mit sinnlosen Silben, dass frisch Gelerntes zuerst schnell und dann immer langsamer vergessen wird. Jede Wiederholung flacht die Kurve ab."
+     ],
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+       "chapter": "2.1 Die Vergessenskurve",
+       "pdf_page": 3,
+       "pdf_page_end": 3,
+       "printed_page": "3"
+      }
+     ]
+    },
+    {
+     "id": "verteilungseffekt",
+     "title": "Der Verteilungseffekt",
+     "paragraphs": [
+      "Dieselbe Lernzeit wirkt langfristig besser, wenn sie auf mehrere Sitzungen mit Abstand verteilt wird. Massiertes Lernen kurz vor der Prüfung kann für den nächsten Tag reichen, hält aber schlecht."
+     ],
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+       "chapter": "2.2 Der Verteilungseffekt",
+       "pdf_page": 3,
+       "pdf_page_end": 3,
+       "printed_page": "3"
+      }
+     ]
+    },
+    {
+     "id": "sm2",
+     "title": "Wachsende Abstände und SM-2",
+     "paragraphs": [
+      "Der Algorithmus SM-2 plant Wiederholungen mit wachsenden Abständen. Auch der Learning Hub plant Wiederholungen nach diesem Prinzip."
+     ],
+     "bullets": [
+      "Erste Wiederholung nach einem Tag",
+      "Zweite Wiederholung nach sechs Tagen",
+      "Danach: Abstand mal Leichtigkeitsfaktor, abhängig von der eigenen Bewertung",
+      "Nach einer falschen Antwort: wieder kurze Abstände"
+     ],
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+       "chapter": "2.3 Wachsende Abstände und SM-2",
+       "pdf_page": 3,
+       "pdf_page_end": 3,
+       "printed_page": "3"
+      }
+     ]
+    }
+   ],
+   "exercise_ids": [
+    "LL-E1-04",
+    "LL-E1-06",
+    "LL-E1-07",
+    "LL-E1-08"
+   ]
+  },
+  {
+   "id": "ll-techniken",
+   "unit": 2,
+   "title": "Welche Techniken sich lohnen",
+   "summary": "Eine Übersichtsarbeit ordnet zehn verbreitete Lerntechniken nach ihrem belegten Nutzen.",
+   "learning_goals": [
+    "Lerntechniken nach ihrem belegten Nutzen einordnen.",
+    "Verschachteltes Üben beschreiben.",
+    "Selbsterklärung anwenden."
+   ],
+   "sections": [
+    {
+     "id": "uebersicht",
+     "title": "Eine Übersichtsarbeit",
+     "paragraphs": [
+      "Dunlosky und Kollegen (2013) bewerteten zehn verbreitete Lerntechniken anhand der Forschungslage."
+     ],
+     "table": {
+      "headers": [
+       "Bewertung",
+       "Im Lehrbrief genannte Techniken"
+      ],
+      "rows": [
+       [
+        "Sehr nützlich",
+        "Abrufübung, verteiltes Üben"
+       ],
+       [
+        "Mäßig nützlich",
+        "unter anderem verschachteltes Üben, Selbsterklärung"
+       ],
+       [
+        "Gering",
+        "Markieren, wiederholtes Lesen, Zusammenfassen"
+       ]
+      ]
+     },
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+       "chapter": "1.1 Eine Übersichtsarbeit",
+       "pdf_page": 2,
+       "pdf_page_end": 2,
+       "printed_page": "2"
+      }
+     ]
+    },
+    {
+     "id": "verschachtelt",
+     "title": "Verschachteltes Üben",
+     "paragraphs": [
+      "Beim verschachtelten Üben wechseln sich Aufgabentypen ab, statt jeden Typ im Block zu üben. Man muss bei jeder Aufgabe erst erkennen, welches Verfahren passt. Genau diese Entscheidung wird in der Prüfung verlangt."
+     ],
+     "note": "In Studien mit Mathematikaufgaben machten verschachtelt Übende beim Üben mehr Fehler, schnitten im späteren Test aber besser ab (Rohrer und Taylor, 2007).",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+       "chapter": "1.2 Verschachteltes Üben",
+       "pdf_page": 2,
+       "pdf_page_end": 2,
+       "printed_page": "2"
+      }
+     ]
+    },
+    {
+     "id": "selbsterklaerung",
+     "title": "Selbsterklärung",
+     "paragraphs": [
+      "Bei der Selbsterklärung begründest du dir jeden Schritt. Das deckt Lücken auf, die beim Lesen unbemerkt bleiben."
+     ],
+     "bullets": [
+      "Warum gilt das?",
+      "Wie hängt es mit dem zusammen, was ich schon weiß?"
+     ],
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+       "chapter": "1.3 Selbsterklärung",
+       "pdf_page": 2,
+       "pdf_page_end": 2,
+       "printed_page": "2"
+      }
+     ]
+    }
+   ],
+   "exercise_ids": [
+    "LL-E2-01",
+    "LL-E2-02",
+    "LL-E2-03",
+    "LL-E2-04",
+    "LL-E2-06"
+   ]
+  },
+  {
+   "id": "ll-lernplan",
+   "unit": 2,
+   "title": "Einen Lernplan aufstellen",
+   "summary": "Ein Lernplan beginnt bei den festen Terminen und enthält Zeiten für Wiederholungen.",
+   "learning_goals": [
+    "Einen Lernplan vom Prüfungstermin rückwärts aufstellen.",
+    "Lernblöcke mit prüfbarem Ziel formulieren."
+   ],
+   "sections": [
+    {
+     "id": "rueckwaerts",
+     "title": "Vom Prüfungstermin rückwärts planen",
+     "paragraphs": [
+      "Trage zuerst feste Termine ein: Prüfung, Abgaben und Veranstaltungen. Verteile den Stoff dann rückwärts auf die verfügbaren Wochen. Halte die letzte Woche für Wiederholung und eine Probeklausur frei."
+     ],
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+       "chapter": "2.1 Vom Prüfungstermin rückwärts planen",
+       "pdf_page": 3,
+       "pdf_page_end": 3,
+       "printed_page": "3"
+      }
+     ]
+    },
+    {
+     "id": "lernbloecke",
+     "title": "Konkrete Lernblöcke",
+     "paragraphs": [
+      "Ein Lernblock braucht ein prüfbares Ziel, zum Beispiel: Ich kann den Testeffekt an einem Beispiel erklären. Viele kommen mit Blöcken von 25 bis 50 Minuten und kurzen Pausen gut zurecht."
+     ],
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+       "chapter": "2.2 Konkrete Lernblöcke",
+       "pdf_page": 3,
+       "pdf_page_end": 3,
+       "printed_page": "3"
+      }
+     ]
+    },
+    {
+     "id": "wiederholungen",
+     "title": "Wiederholungen einplanen",
+     "paragraphs": [
+      "Jeder Plan enthält neben neuem Stoff feste Zeiten für fällige Wiederholungen. Beginne eine Sitzung mit einer kurzen Abrufübung zum Stoff der letzten Sitzung."
+     ],
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+       "chapter": "2.3 Wiederholungen einplanen",
+       "pdf_page": 3,
+       "pdf_page_end": 3,
+       "printed_page": "3"
+      }
+     ]
+    }
+   ],
+   "exercise_ids": [
+    "LL-E2-05"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,312 @@
+{
+ "schema_version": 1,
+ "module": {
+  "name": "Lernen lernen (Demo)",
+  "number": "10001",
+  "unit_count": 2
+ },
+ "originals": [],
+ "questions": [
+  {
+   "id": "LL-E1-01",
+   "unit": 1,
+   "topic": "Abrufübung",
+   "type": "flashcard",
+   "question": "Was bedeutet Abrufübung?",
+   "source": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+   "source_page": 2,
+   "source_kind": "course_material",
+   "original_question": "Eigene Übung zum Demo-Lehrbrief. Es gibt keine Originalaufgabe.",
+   "original_solution": "Es gibt keine offizielle Musterlösung. Die Antwort ist aus Kurseinheit 1, Abschnitt 1.1 Was Abrufübung bedeutet, hergeleitet.",
+   "model_answer": "Wissen aktiv aus dem Gedächtnis holen, ohne in die Unterlagen zu schauen, zum Beispiel mit Karteikarten, Übungsfragen oder durch Aufschreiben aus dem Kopf.",
+   "explanation": "Entscheidend ist, dass die Unterlagen geschlossen bleiben. Jeder erfolgreiche Abruf festigt die Erinnerung (Testeffekt).",
+   "theory_sources": [
+    {
+     "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+     "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+     "chapter": "1.1 Was Abrufübung bedeutet",
+     "pdf_page": 2,
+     "pdf_page_end": 2,
+     "printed_page": "2"
+    }
+   ],
+   "difficulty": 1,
+   "verified": false,
+   "generated_by": "Learning Hub Demo"
+  },
+  {
+   "id": "LL-E1-02",
+   "unit": 1,
+   "topic": "Testeffekt",
+   "type": "single_choice",
+   "question": "Was zeigte sich in der Studie von Roediger und Karpicke (2006) nach einer Woche?",
+   "source": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+   "source_page": 2,
+   "source_kind": "course_material",
+   "original_question": "Eigene Übung zum Demo-Lehrbrief. Es gibt keine Originalaufgabe.",
+   "original_solution": "Es gibt keine offizielle Musterlösung. Die Antwort ist aus Kurseinheit 1, Abschnitt 1.2 Ein klassischer Befund, hergeleitet.",
+   "model_answer": "Die Abrufgruppe erinnerte deutlich mehr als die Lesegruppe.",
+   "explanation": "Nach fünf Minuten lag die Lesegruppe leicht vorn. Nach einer Woche hatte sich das umgekehrt: Wer den Text aus dem Gedächtnis wiedergegeben hatte, erinnerte deutlich mehr.",
+   "theory_sources": [
+    {
+     "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+     "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+     "chapter": "1.2 Ein klassischer Befund",
+     "pdf_page": 2,
+     "pdf_page_end": 2,
+     "printed_page": "2"
+    }
+   ],
+   "difficulty": 1,
+   "verified": false,
+   "generated_by": "Learning Hub Demo",
+   "options": [
+    "Die Lesegruppe erinnerte deutlich mehr.",
+    "Die Abrufgruppe erinnerte deutlich mehr.",
+    "Beide Gruppen erinnerten gleich viel.",
+    "Beide Gruppen hatten fast alles vergessen."
+   ],
+   "correct_answers": [
+    1
+   ]
+  },
+  {
+   "id": "LL-E1-03",
+   "unit": 1,
+   "topic": "Abrufübung",
+   "type": "multiple_choice",
+   "question": "Welche Tätigkeiten sind Abrufübung?",
+   "source": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+   "source_page": 2,
+   "source_kind": "course_material",
+   "original_question": "Eigene Übung zum Demo-Lehrbrief. Es gibt keine Originalaufgabe.",
+   "original_solution": "Es gibt keine offizielle Musterlösung. Die Antwort ist aus Kurseinheit 1, Abschnitt 1.1 Was Abrufübung bedeutet, hergeleitet.",
+   "model_answer": "Karteikarten aus dem Kopf beantworten, ein Thema aus dem Kopf aufschreiben und Übungsfragen ohne Unterlagen lösen.",
+   "explanation": "Abrufübung liegt vor, wenn Wissen ohne Blick in die Unterlagen aus dem Gedächtnis geholt wird. Erneutes Lesen und Markieren gehören nicht dazu.",
+   "theory_sources": [
+    {
+     "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+     "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+     "chapter": "1.1 Was Abrufübung bedeutet",
+     "pdf_page": 2,
+     "pdf_page_end": 2,
+     "printed_page": "2"
+    }
+   ],
+   "difficulty": 1,
+   "verified": false,
+   "generated_by": "Learning Hub Demo",
+   "options": [
+    "Karteikarten aus dem Kopf beantworten",
+    "Den Text ein drittes Mal lesen",
+    "Ein Thema aus dem Kopf aufschreiben",
+    "Wichtige Stellen markieren",
+    "Übungsfragen ohne Unterlagen lösen"
+   ],
+   "correct_answers": [
+    0,
+    2,
+    4
+   ]
+  },
+  {
+   "id": "LL-E1-04",
+   "unit": 1,
+   "topic": "Vergessenskurve",
+   "type": "cloze",
+   "question": "Ergänze die Aussage zur Vergessenskurve.",
+   "source": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+   "source_page": 3,
+   "source_kind": "course_material",
+   "original_question": "Eigene Übung zum Demo-Lehrbrief. Es gibt keine Originalaufgabe.",
+   "original_solution": "Es gibt keine offizielle Musterlösung. Die Antwort ist aus Kurseinheit 1, Abschnitt 2.1 Die Vergessenskurve, hergeleitet.",
+   "model_answer": "Frisch Gelerntes wird zuerst schnell und dann immer langsamer vergessen.",
+   "explanation": "So beschrieb es Hermann Ebbinghaus 1885. Jede Wiederholung flacht die Kurve ab.",
+   "theory_sources": [
+    {
+     "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+     "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+     "chapter": "2.1 Die Vergessenskurve",
+     "pdf_page": 3,
+     "pdf_page_end": 3,
+     "printed_page": "3"
+    }
+   ],
+   "difficulty": 1,
+   "verified": false,
+   "generated_by": "Learning Hub Demo",
+   "text": "Frisch Gelerntes wird zuerst ___ und dann immer ___ vergessen.",
+   "answers": [
+    "schnell",
+    "langsamer"
+   ],
+   "synonyms": [
+    [
+     "rasch"
+    ],
+    [
+     "langsam"
+    ]
+   ]
+  },
+  {
+   "id": "LL-E1-05",
+   "unit": 1,
+   "topic": "Flüssigkeitsillusion",
+   "type": "free_text",
+   "question": "Erkläre die Flüssigkeitsillusion und wie Abrufübung davor schützt.",
+   "source": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+   "source_page": 2,
+   "source_kind": "course_material",
+   "original_question": "Eigene Übung zum Demo-Lehrbrief. Es gibt keine Originalaufgabe.",
+   "original_solution": "Es gibt keine offizielle Musterlösung. Die Antwort ist aus Kurseinheit 1, Abschnitt 1.3 Die Flüssigkeitsillusion, hergeleitet.",
+   "model_answer": "Wiederholtes Lesen macht einen Text vertraut. Diese Vertrautheit wird leicht mit Können verwechselt. Wer sich selbst abfragt, merkt sofort, was noch fehlt. Abrufübung ist deshalb auch Selbstkontrolle.",
+   "explanation": "Die Antwort sollte beide Teile enthalten: die Verwechslung von Vertrautheit mit Können und die Rückmeldung durch das Abfragen.",
+   "theory_sources": [
+    {
+     "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+     "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+     "chapter": "1.3 Die Flüssigkeitsillusion",
+     "pdf_page": 2,
+     "pdf_page_end": 2,
+     "printed_page": "2"
+    }
+   ],
+   "difficulty": 2,
+   "verified": false,
+   "generated_by": "Learning Hub Demo",
+   "keywords": [
+    "Vertrautheit",
+    "Können",
+    "abfragen",
+    "Selbstkontrolle"
+   ],
+   "checklist": [
+    "Vertrautheit durch wiederholtes Lesen genannt",
+    "Verwechslung mit Können erklärt",
+    "Abfragen als Selbstkontrolle genannt"
+   ]
+  },
+  {
+   "id": "LL-E1-06",
+   "unit": 1,
+   "topic": "SM-2",
+   "type": "single_choice",
+   "question": "Nach wie vielen Tagen sieht der Algorithmus SM-2 die zweite Wiederholung vor?",
+   "source": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+   "source_page": 3,
+   "source_kind": "course_material",
+   "original_question": "Eigene Übung zum Demo-Lehrbrief. Es gibt keine Originalaufgabe.",
+   "original_solution": "Es gibt keine offizielle Musterlösung. Die Antwort ist aus Kurseinheit 1, Abschnitt 2.3 Wachsende Abstände und SM-2, hergeleitet.",
+   "model_answer": "Nach sechs Tagen.",
+   "explanation": "Die erste Wiederholung folgt nach einem Tag, die zweite nach sechs Tagen. Danach wird der Abstand mit dem Leichtigkeitsfaktor multipliziert.",
+   "theory_sources": [
+    {
+     "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+     "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+     "chapter": "2.3 Wachsende Abstände und SM-2",
+     "pdf_page": 3,
+     "pdf_page_end": 3,
+     "printed_page": "3"
+    }
+   ],
+   "difficulty": 1,
+   "verified": false,
+   "generated_by": "Learning Hub Demo",
+   "options": [
+    "Nach zwei Tagen",
+    "Nach drei Tagen",
+    "Nach sechs Tagen",
+    "Nach vierzehn Tagen"
+   ],
+   "correct_answers": [
+    2
+   ]
+  },
+  {
+   "id": "LL-E1-07",
+   "unit": 1,
+   "topic": "Begriffe der Kurseinheit 1",
+   "type": "matching",
+   "question": "Ordne die Begriffe ihren Beschreibungen zu.",
+   "source": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+   "source_page": 3,
+   "source_kind": "course_material",
+   "original_question": "Eigene Übung zum Demo-Lehrbrief. Es gibt keine Originalaufgabe.",
+   "original_solution": "Es gibt keine offizielle Musterlösung. Die Antwort ist aus Kurseinheit 1, Abschnitt 2 Verteiltes Wiederholen, hergeleitet.",
+   "model_answer": "Testeffekt: Abrufen festigt die Erinnerung. Vergessenskurve: zuerst schnelles, dann langsameres Vergessen. Verteilungseffekt: verteilte Lernzeit wirkt langfristig besser. Leichtigkeitsfaktor: bestimmt bei SM-2 das Wachstum der Abstände.",
+   "explanation": "Alle vier Begriffe stehen in Kurseinheit 1, Kapitel 1 und 2.",
+   "theory_sources": [
+    {
+     "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+     "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+     "chapter": "2 Verteiltes Wiederholen",
+     "pdf_page": 3,
+     "pdf_page_end": 3,
+     "printed_page": "3"
+    }
+   ],
+   "difficulty": 2,
+   "verified": false,
+   "generated_by": "Learning Hub Demo",
+   "pairs": [
+    {
+     "term": "Testeffekt",
+     "definition": "Erfolgreiches Abrufen festigt die Erinnerung."
+    },
+    {
+     "term": "Vergessenskurve",
+     "definition": "Frisch Gelerntes wird zuerst schnell, dann langsamer vergessen."
+    },
+    {
+     "term": "Verteilungseffekt",
+     "definition": "Dieselbe Lernzeit wirkt verteilt langfristig besser als am Stück."
+    },
+    {
+     "term": "Leichtigkeitsfaktor",
+     "definition": "Zahl, mit der SM-2 den Wiederholungsabstand multipliziert."
+    }
+   ]
+  },
+  {
+   "id": "LL-E1-08",
+   "unit": 1,
+   "topic": "Verteiltes Wiederholen",
+   "type": "case_analysis",
+   "question": "Lena schreibt in vier Wochen eine Klausur. Sie plant, den gesamten Stoff an den letzten beiden Abenden dreimal durchzulesen. Beurteile den Plan und schlage eine Änderung vor.",
+   "source": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+   "source_page": 3,
+   "source_kind": "course_material",
+   "original_question": "Eigene Übung zum Demo-Lehrbrief. Es gibt keine Originalaufgabe.",
+   "original_solution": "Es gibt keine offizielle Musterlösung. Die Antwort ist aus Kurseinheit 1, Abschnitt 2.2 Der Verteilungseffekt, hergeleitet.",
+   "model_answer": "Der Plan setzt auf massiertes Lernen und wiederholtes Lesen. Beides hält schlecht und täuscht Können vor. Besser: den Stoff über die vier Wochen verteilen, jede Sitzung mit Abrufübung statt mit erneutem Lesen gestalten und die Wiederholungen mit wachsendem Abstand einplanen.",
+   "explanation": "Zu nennen sind der Verteilungseffekt, der Testeffekt und die Flüssigkeitsillusion.",
+   "theory_sources": [
+    {
+     "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+     "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+     "chapter": "2.2 Der Verteilungseffekt",
+     "pdf_page": 3,
+     "pdf_page_end": 3,
+     "printed_page": "3"
+    }
+   ],
+   "difficulty": 3,
+   "verified": false,
+   "generated_by": "Learning Hub Demo",
+   "keywords": [
+    "massiert",
+    "verteilen",
+    "Abrufübung",
+    "Abstand"
+   ],
+   "checklist": [
+    "Massiertes Lernen als Schwäche benannt",
+    "Wiederholtes Lesen als Schwäche benannt",
+    "Verteilung über vier Wochen vorgeschlagen",
+    "Abrufübung vorgeschlagen"
+   ]
+  }
+ ],
+ "coverage": []
+}

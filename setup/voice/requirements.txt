@@ -1,0 +1,6 @@
+# Sprach-Laufzeit des Learning Hub (Stand der geprüften Installation vom 09.11.2026, Python 3.13)
+mlx-whisper==0.4.3
+piper-tts==1.8.0
+onnxruntime==1.31.1
+imageio-ffmpeg==0.8.1
+numpy==2.5.4

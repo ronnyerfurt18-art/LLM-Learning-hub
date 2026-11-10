@@ -1,0 +1,220 @@
+{
+ "schema_version": 1,
+ "module": {
+  "name": "Lernen lernen (Demo)",
+  "number": "10001",
+  "unit_count": 2
+ },
+ "originals": [],
+ "questions": [
+  {
+   "id": "LL-E2-01",
+   "unit": 2,
+   "topic": "Übersichtsarbeit",
+   "type": "single_choice",
+   "question": "Welche beiden Techniken stuften Dunlosky und Kollegen (2013) als sehr nützlich ein?",
+   "source": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+   "source_page": 2,
+   "source_kind": "course_material",
+   "original_question": "Eigene Übung zum Demo-Lehrbrief. Es gibt keine Originalaufgabe.",
+   "original_solution": "Es gibt keine offizielle Musterlösung. Die Antwort ist aus Kurseinheit 2, Abschnitt 1.1 Eine Übersichtsarbeit, hergeleitet.",
+   "model_answer": "Abrufübung und verteiltes Üben.",
+   "explanation": "Markieren, wiederholtes Lesen und Zusammenfassen erhielten eine geringe Bewertung; verschachteltes Üben und Selbsterklärung galten als mäßig nützlich.",
+   "theory_sources": [
+    {
+     "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+     "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+     "chapter": "1.1 Eine Übersichtsarbeit",
+     "pdf_page": 2,
+     "pdf_page_end": 2,
+     "printed_page": "2"
+    }
+   ],
+   "difficulty": 1,
+   "verified": false,
+   "generated_by": "Learning Hub Demo",
+   "options": [
+    "Markieren und Zusammenfassen",
+    "Abrufübung und verteiltes Üben",
+    "Wiederholtes Lesen und Markieren",
+    "Selbsterklärung und Zusammenfassen"
+   ],
+   "correct_answers": [
+    1
+   ]
+  },
+  {
+   "id": "LL-E2-02",
+   "unit": 2,
+   "topic": "Übersichtsarbeit",
+   "type": "multiple_choice",
+   "question": "Welche Techniken erhielten bei Dunlosky und Kollegen (2013) eine geringe Bewertung?",
+   "source": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+   "source_page": 2,
+   "source_kind": "course_material",
+   "original_question": "Eigene Übung zum Demo-Lehrbrief. Es gibt keine Originalaufgabe.",
+   "original_solution": "Es gibt keine offizielle Musterlösung. Die Antwort ist aus Kurseinheit 2, Abschnitt 1.1 Eine Übersichtsarbeit, hergeleitet.",
+   "model_answer": "Markieren, wiederholtes Lesen und Zusammenfassen.",
+   "explanation": "Abrufübung und verteiltes Üben wurden als sehr nützlich eingestuft.",
+   "theory_sources": [
+    {
+     "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+     "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+     "chapter": "1.1 Eine Übersichtsarbeit",
+     "pdf_page": 2,
+     "pdf_page_end": 2,
+     "printed_page": "2"
+    }
+   ],
+   "difficulty": 1,
+   "verified": false,
+   "generated_by": "Learning Hub Demo",
+   "options": [
+    "Markieren",
+    "Abrufübung",
+    "Wiederholtes Lesen",
+    "Verteiltes Üben",
+    "Zusammenfassen"
+   ],
+   "correct_answers": [
+    0,
+    2,
+    4
+   ]
+  },
+  {
+   "id": "LL-E2-03",
+   "unit": 2,
+   "topic": "Verschachteltes Üben",
+   "type": "flashcard",
+   "question": "Was ist verschachteltes Üben?",
+   "source": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+   "source_page": 2,
+   "source_kind": "course_material",
+   "original_question": "Eigene Übung zum Demo-Lehrbrief. Es gibt keine Originalaufgabe.",
+   "original_solution": "Es gibt keine offizielle Musterlösung. Die Antwort ist aus Kurseinheit 2, Abschnitt 1.2 Verschachteltes Üben, hergeleitet.",
+   "model_answer": "Aufgabentypen wechseln sich ab, statt jeden Typ im Block zu üben.",
+   "explanation": "Dadurch muss man bei jeder Aufgabe erst erkennen, welches Verfahren passt.",
+   "theory_sources": [
+    {
+     "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+     "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+     "chapter": "1.2 Verschachteltes Üben",
+     "pdf_page": 2,
+     "pdf_page_end": 2,
+     "printed_page": "2"
+    }
+   ],
+   "difficulty": 1,
+   "verified": false,
+   "generated_by": "Learning Hub Demo"
+  },
+  {
+   "id": "LL-E2-04",
+   "unit": 2,
+   "topic": "Verschachteltes Üben",
+   "type": "free_text",
+   "question": "Warum ist verschachteltes Üben anstrengender als Üben im Block, und warum lohnt es sich trotzdem?",
+   "source": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+   "source_page": 2,
+   "source_kind": "course_material",
+   "original_question": "Eigene Übung zum Demo-Lehrbrief. Es gibt keine Originalaufgabe.",
+   "original_solution": "Es gibt keine offizielle Musterlösung. Die Antwort ist aus Kurseinheit 2, Abschnitt 1.2 Verschachteltes Üben, hergeleitet.",
+   "model_answer": "Man muss bei jeder Aufgabe erst erkennen, welches Verfahren passt. Genau diese Entscheidung wird in der Prüfung verlangt. In Studien mit Mathematikaufgaben machten verschachtelt Übende beim Üben mehr Fehler, schnitten im späteren Test aber besser ab.",
+   "explanation": "Die Antwort sollte die Wahl des Verfahrens und den Befund zum späteren Test nennen.",
+   "theory_sources": [
+    {
+     "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+     "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+     "chapter": "1.2 Verschachteltes Üben",
+     "pdf_page": 2,
+     "pdf_page_end": 2,
+     "printed_page": "2"
+    }
+   ],
+   "difficulty": 2,
+   "verified": false,
+   "generated_by": "Learning Hub Demo",
+   "keywords": [
+    "Verfahren erkennen",
+    "Prüfung",
+    "mehr Fehler",
+    "späterer Test"
+   ],
+   "checklist": [
+    "Wahl des Verfahrens genannt",
+    "Bezug zur Prüfung hergestellt",
+    "Befund zum späteren Test genannt"
+   ]
+  },
+  {
+   "id": "LL-E2-05",
+   "unit": 2,
+   "topic": "Lernplan",
+   "type": "cloze",
+   "question": "Ergänze die Aussage zum Lernplan.",
+   "source": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+   "source_page": 3,
+   "source_kind": "course_material",
+   "original_question": "Eigene Übung zum Demo-Lehrbrief. Es gibt keine Originalaufgabe.",
+   "original_solution": "Es gibt keine offizielle Musterlösung. Die Antwort ist aus Kurseinheit 2, Abschnitt 2.1 Vom Prüfungstermin rückwärts planen, hergeleitet.",
+   "model_answer": "Ein Lernplan wird vom Prüfungstermin rückwärts aufgestellt; die letzte Woche bleibt für Wiederholung und eine Probeklausur frei.",
+   "explanation": "Zuerst kommen die festen Termine, dann wird der Stoff rückwärts auf die Wochen verteilt.",
+   "theory_sources": [
+    {
+     "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+     "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+     "chapter": "2.1 Vom Prüfungstermin rückwärts planen",
+     "pdf_page": 3,
+     "pdf_page_end": 3,
+     "printed_page": "3"
+    }
+   ],
+   "difficulty": 1,
+   "verified": false,
+   "generated_by": "Learning Hub Demo",
+   "text": "Ein Lernplan wird vom ___ rückwärts aufgestellt; die letzte Woche bleibt für ___ und eine Probeklausur frei.",
+   "answers": [
+    "Prüfungstermin",
+    "Wiederholung"
+   ],
+   "synonyms": [
+    [
+     "Prüfungstag",
+     "Klausurtermin"
+    ],
+    [
+     "Wiederholungen"
+    ]
+   ]
+  },
+  {
+   "id": "LL-E2-06",
+   "unit": 2,
+   "topic": "Selbsterklärung",
+   "type": "flashcard",
+   "question": "Welche zwei Fragen stellst du dir bei der Selbsterklärung?",
+   "source": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+   "source_page": 2,
+   "source_kind": "course_material",
+   "original_question": "Eigene Übung zum Demo-Lehrbrief. Es gibt keine Originalaufgabe.",
+   "original_solution": "Es gibt keine offizielle Musterlösung. Die Antwort ist aus Kurseinheit 2, Abschnitt 1.3 Selbsterklärung, hergeleitet.",
+   "model_answer": "Warum gilt das? Wie hängt es mit dem zusammen, was ich schon weiß?",
+   "explanation": "Das Begründen jedes Schritts deckt Lücken auf, die beim Lesen unbemerkt bleiben.",
+   "theory_sources": [
+    {
+     "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+     "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+     "chapter": "1.3 Selbsterklärung",
+     "pdf_page": 2,
+     "pdf_page_end": 2,
+     "printed_page": "2"
+    }
+   ],
+   "difficulty": 1,
+   "verified": false,
+   "generated_by": "Learning Hub Demo"
+  }
+ ],
+ "coverage": []
+}

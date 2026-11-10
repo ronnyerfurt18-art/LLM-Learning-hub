@@ -1,0 +1,27 @@
+.planner-workspace { display: grid; gap: 20px; }
+.planner-overview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.planner-panel { min-width: 0; padding: clamp(16px, 3vw, 26px); }
+.planner-panel h2 { margin: 0 0 10px; }
+.planner-panel .eyebrow { margin-bottom: 6px; }
+.planner-panel .section-head h2 { margin: 0; }
+.planner-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.planner-actions select { width: auto; max-width: 100%; }
+.planner-question-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; margin: 16px 0 0; }
+.planner-question-form .field { margin: 0; }
+.planner-answer { margin-top: 16px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; overflow-wrap: anywhere; }
+.planner-answer h3 { margin: 0 0 8px; }
+.planner-answer p { margin: 0; }
+.planner-answer small { display: block; margin-top: 8px; }
+.planner-module { margin: 14px 0; padding: 12px 0; border-top: 1px solid var(--border); }
+.planner-module summary { cursor: pointer; padding: 6px 0; }
+.planner-module summary > .muted { display: block; margin-top: 4px; }
+.planner-lessons { padding: 0; list-style: none; }
+.planner-lessons li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.planner-lessons a { text-decoration: underline; text-underline-offset: .2em; }
+.planner-lessons select { width: auto; }
+.planner-lesson-controls { padding: 12px 16px; margin: 0 0 18px; }
+.planner-lesson-controls .planner-actions select { max-width: min(100%, 32ch); }
+@media (max-width: 760px) {
+  .planner-overview, .planner-question-form { grid-template-columns: minmax(0, 1fr); }
+  .planner-panel .section-head { flex-wrap: wrap; gap: 10px; }
+}

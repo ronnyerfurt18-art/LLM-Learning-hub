@@ -1,0 +1,22 @@
+# Laufzeit und Build
+.venv/
+.npm-cache/
+frontend/node_modules/
+frontend/dist/
+__pycache__/
+.pytest_cache/
+.DS_Store
+
+# Eigene Einstellungen, Daten und Lerninhalte – gehören nie ins Repository
+/tutor.local.json
+/data/
+/tmp/
+/content/
+/content-fragments/
+/imports/
+/planning/
+/docs/quellen/
+/docs/screenshots/
+
+# Doppelte Dateien aus Cloud-Synchronisation
+* 2.*

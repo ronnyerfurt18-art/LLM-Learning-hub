@@ -1,0 +1,233 @@
+{
+ "id": "lernen-lernen-uebung1",
+ "module_number": "10001",
+ "title": "Übungsarbeit 1 (Demo)",
+ "due_date": "2030-12-31",
+ "source": {
+  "path": "10001 Lernen lernen (Demo)/Einsendearbeiten/10001-uebungsarbeit-1-demo.pdf",
+  "title": "Lernen lernen · Übungsarbeit 1 · Demo",
+  "pdf_page": 1
+ },
+ "solution_note": "Die Einordnungen sind aus den beiden Demo-Lehrbriefen hergeleitet. Eine offizielle Musterlösung gibt es nicht.",
+ "questions": [
+  {
+   "id": "lernen-lernen-uebung1-q01",
+   "number": 1,
+   "title": "Abrufübung",
+   "prompt": "Welche Aussagen zur Abrufübung treffen zu?",
+   "source_page": 1,
+   "options": [
+    {
+     "id": "A",
+     "text": "Abrufübung bedeutet, Wissen ohne Blick in die Unterlagen aus dem Gedächtnis zu holen.",
+     "is_correct": true,
+     "explanation": "So definiert der Lehrbrief die Abrufübung.",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+       "chapter": "1.1 Was Abrufübung bedeutet",
+       "pdf_page": 2,
+       "pdf_page_end": 2,
+       "printed_page": "2"
+      }
+     ]
+    },
+    {
+     "id": "B",
+     "text": "In der Studie von Roediger und Karpicke erinnerte nach einer Woche die Gruppe mehr, die den Text mehrfach gelesen hatte.",
+     "is_correct": false,
+     "explanation": "Nach einer Woche erinnerte die Abrufgruppe deutlich mehr, nicht die Lesegruppe.",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+       "chapter": "1.2 Ein klassischer Befund",
+       "pdf_page": 2,
+       "pdf_page_end": 2,
+       "printed_page": "2"
+      }
+     ]
+    },
+    {
+     "id": "C",
+     "text": "Nach fünf Minuten erinnerte die Lesegruppe etwas mehr als die Abrufgruppe.",
+     "is_correct": true,
+     "explanation": "Der kurzfristige Vorteil lag beim Lesen; er kehrte sich nach einer Woche um.",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+       "chapter": "1.2 Ein klassischer Befund",
+       "pdf_page": 2,
+       "pdf_page_end": 2,
+       "printed_page": "2"
+      }
+     ]
+    },
+    {
+     "id": "D",
+     "text": "Vertrautheit mit einem Text ist ein verlässliches Zeichen dafür, dass man ihn beherrscht.",
+     "is_correct": false,
+     "explanation": "Vertrautheit wird leicht mit Können verwechselt (Flüssigkeitsillusion).",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+       "chapter": "1.3 Die Flüssigkeitsillusion",
+       "pdf_page": 2,
+       "pdf_page_end": 2,
+       "printed_page": "2"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lernen-lernen-uebung1-q02",
+   "number": 2,
+   "title": "Verteiltes Wiederholen",
+   "prompt": "Welche Aussagen zum verteilten Wiederholen treffen zu?",
+   "source_page": 1,
+   "options": [
+    {
+     "id": "A",
+     "text": "Nach der Vergessenskurve wird frisch Gelerntes zuerst langsam und dann immer schneller vergessen.",
+     "is_correct": false,
+     "explanation": "Es ist umgekehrt: zuerst schnell, dann immer langsamer.",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+       "chapter": "2.1 Die Vergessenskurve",
+       "pdf_page": 3,
+       "pdf_page_end": 3,
+       "printed_page": "3"
+      }
+     ]
+    },
+    {
+     "id": "B",
+     "text": "Dieselbe Lernzeit wirkt langfristig besser, wenn sie auf mehrere Sitzungen mit Abstand verteilt wird.",
+     "is_correct": true,
+     "explanation": "Das ist der Verteilungseffekt.",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+       "chapter": "2.2 Der Verteilungseffekt",
+       "pdf_page": 3,
+       "pdf_page_end": 3,
+       "printed_page": "3"
+      }
+     ]
+    },
+    {
+     "id": "C",
+     "text": "Der Algorithmus SM-2 sieht die zweite Wiederholung nach sechs Tagen vor.",
+     "is_correct": true,
+     "explanation": "Erste Wiederholung nach einem Tag, zweite nach sechs Tagen.",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+       "chapter": "2.3 Wachsende Abstände und SM-2",
+       "pdf_page": 3,
+       "pdf_page_end": 3,
+       "printed_page": "3"
+      }
+     ]
+    },
+    {
+     "id": "D",
+     "text": "Nach einer falschen Antwort verlängert SM-2 den Abstand bis zur nächsten Wiederholung.",
+     "is_correct": false,
+     "explanation": "Nach einer falschen Antwort beginnt die Karte wieder mit kurzen Abständen.",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 1 · Demo-Lehrbrief",
+       "chapter": "2.3 Wachsende Abstände und SM-2",
+       "pdf_page": 3,
+       "pdf_page_end": 3,
+       "printed_page": "3"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lernen-lernen-uebung1-q03",
+   "number": 3,
+   "title": "Techniken und Lernplan",
+   "prompt": "Welche Aussagen zu Lerntechniken und Lernplanung treffen zu?",
+   "source_page": 1,
+   "options": [
+    {
+     "id": "A",
+     "text": "Dunlosky und Kollegen stuften Markieren als sehr nützlich ein.",
+     "is_correct": false,
+     "explanation": "Markieren erhielt eine geringe Bewertung. Sehr nützlich waren Abrufübung und verteiltes Üben.",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+       "chapter": "1.1 Eine Übersichtsarbeit",
+       "pdf_page": 2,
+       "pdf_page_end": 2,
+       "printed_page": "2"
+      }
+     ]
+    },
+    {
+     "id": "B",
+     "text": "Verschachtelt Übende machten während des Übens mehr Fehler, schnitten im späteren Test aber besser ab.",
+     "is_correct": true,
+     "explanation": "So der im Lehrbrief genannte Befund aus Studien mit Mathematikaufgaben.",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+       "chapter": "1.2 Verschachteltes Üben",
+       "pdf_page": 2,
+       "pdf_page_end": 2,
+       "printed_page": "2"
+      }
+     ]
+    },
+    {
+     "id": "C",
+     "text": "Ein Lernplan wird vom Prüfungstermin rückwärts aufgestellt.",
+     "is_correct": true,
+     "explanation": "Zuerst die festen Termine, dann den Stoff rückwärts verteilen.",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+       "chapter": "2.1 Vom Prüfungstermin rückwärts planen",
+       "pdf_page": 3,
+       "pdf_page_end": 3,
+       "printed_page": "3"
+      }
+     ]
+    },
+    {
+     "id": "D",
+     "text": "Wiederholungen gehören nicht in den Lernplan, weil sie sich von selbst ergeben.",
+     "is_correct": false,
+     "explanation": "Jeder Plan enthält feste Zeiten für fällige Wiederholungen.",
+     "sources": [
+      {
+       "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+       "title": "Lernen lernen · Kurseinheit 2 · Demo-Lehrbrief",
+       "chapter": "2.3 Wiederholungen einplanen",
+       "pdf_page": 3,
+       "pdf_page_end": 3,
+       "printed_page": "3"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

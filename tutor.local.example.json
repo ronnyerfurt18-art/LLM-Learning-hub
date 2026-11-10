@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "provider": "ollama",
+  "model": "qwen3:14b",
+  "ollama_model": "qwen3:14b",
+  "context_tokens": 16384,
+  "study_folder": "~/LearningHub/Studium",
+  "bonsai_runtime": "~/.learning-hub/runtimes/bonsai-demo",
+  "voice_runtime": "~/.learning-hub/runtimes/voice"
+}

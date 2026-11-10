@@ -1,0 +1,10 @@
+.source-links{margin:22px 0 0;padding:17px 19px;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:9px;background:var(--surface-alt)}
+.source-links>strong{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--accent-strong);margin-bottom:11px}
+.source-links ul{list-style:none;margin:0;padding:0}.source-links li{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:11px 0;border-top:1px solid var(--border)}.source-links li:first-child{padding-top:0;border-top:0}.source-links li:last-child{padding-bottom:0}
+.source-reference-title{display:block;font-size:12px;line-height:1.6;font-weight:600}.source-reference-meta{display:block;font-size:11px;color:var(--muted);line-height:1.7;margin-top:2px}
+.source-document-link{display:inline-flex;align-items:center;gap:7px;min-height:36px;font-size:12px;font-weight:600;flex-shrink:0}.source-details .source-document-link{margin-bottom:10px}.source-links .source-document-link{margin-bottom:0}
+.task-context-source .source-document-link{font-size:11px;margin-top:4px}
+@media(max-width:650px){.source-links{padding:15px}.source-links li{align-items:flex-start;flex-direction:column;gap:5px}.source-document-link{font-size:11px}}
+
+.module-learning-pages{display:flex;align-items:center;gap:7px;margin:0 0 14px;text-align:left;font-size:12px}
+.source-document-links{display:inline-flex;align-items:center;gap:12px;flex-wrap:wrap}.source-document-full{font-size:10px;color:var(--muted)}

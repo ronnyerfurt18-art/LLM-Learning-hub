@@ -1,0 +1,53 @@
+[
+ {
+  "id": "ll-testeffekt",
+  "module_id": "M-10001",
+  "lesson_id": "ll-abrufuebung",
+  "section_id": "befund",
+  "title": "1. Testeffekt erklären",
+  "question": "Eine Freundin liest ihre Zusammenfassung vor jeder Prüfung fünfmal. Was rätst du ihr und warum?",
+  "criteria": "Antwortkriterien: Abrufübung als Alternative nennen; Befund nach einer Woche wiedergeben; Flüssigkeitsillusion ansprechen.",
+  "sources": [
+   {
+    "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+    "title": "Lernen lernen · Kurseinheit 1",
+    "pdf_page": 2,
+    "printed_page": "2"
+   }
+  ]
+ },
+ {
+  "id": "ll-abstaende",
+  "module_id": "M-10001",
+  "lesson_id": "ll-verteilt",
+  "section_id": "sm2",
+  "title": "2. Wachsende Abstände begründen",
+  "question": "Warum fragt ein Karteikartenprogramm sichere Karten immer seltener ab?",
+  "criteria": "Antwortkriterien: Vergessenskurve nennen; Verteilungseffekt erklären; wachsende Abstände nach erfolgreichem Abruf beschreiben.",
+  "sources": [
+   {
+    "path": "10001 Lernen lernen (Demo)/10001-01-S#1-demo.pdf",
+    "title": "Lernen lernen · Kurseinheit 1",
+    "pdf_page": 3,
+    "printed_page": "3"
+   }
+  ]
+ },
+ {
+  "id": "ll-lernplan",
+  "module_id": "M-10001",
+  "lesson_id": "ll-lernplan",
+  "section_id": "rueckwaerts",
+  "title": "3. Lernplan aufstellen",
+  "question": "Du hast sechs Wochen bis zur Klausur. Wie baust du deinen Lernplan auf?",
+  "criteria": "Antwortkriterien: feste Termine zuerst; Stoff rückwärts verteilen; letzte Woche für Wiederholung und Probeklausur; Wiederholungen fest einplanen.",
+  "sources": [
+   {
+    "path": "10001 Lernen lernen (Demo)/10001-02-S#1-demo.pdf",
+    "title": "Lernen lernen · Kurseinheit 2",
+    "pdf_page": 3,
+    "printed_page": "3"
+   }
+  ]
+ }
+]

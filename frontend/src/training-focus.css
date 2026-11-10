@@ -1,0 +1,48 @@
+.learning-training .page-title{margin-bottom:19px;gap:14px}
+.learning-training .page-title h1{font-size:clamp(26px,2.4vw,32px);letter-spacing:-.7px;margin-bottom:6px}
+.learning-training .page-title .eyebrow{margin-bottom:7px}
+.learning-training .learning-filters{padding:13px 17px;margin-bottom:18px;gap:13px}
+.learning-training .session-progress{max-width:1120px;margin-bottom:12px;gap:7px}
+.question-card.training-question{max-width:1120px;padding:25px 29px;scroll-margin-top:16px}
+.training-question .question-meta{margin-bottom:12px}
+.training-question .question-topic{margin-bottom:9px}
+.training-question .question-text{font-size:22px;line-height:1.45;max-width:85ch;margin-bottom:18px}
+.training-question .input-instruction{margin-bottom:10px;font-size:14px}
+.training-question textarea.open-answer{font-size:18px;line-height:1.65;min-height:150px;padding:15px 17px}
+.training-question .answer-word-count{margin-top:7px}
+.training-question .question-actions{margin-top:17px;padding-top:0;gap:12px}
+.training-question .feedback{margin-top:15px}
+.training-question .answer-comparison{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr));gap:18px;align-items:stretch;margin-bottom:16px}
+.training-question .answer-panel{min-width:0;border:1px solid var(--border);border-radius:11px;padding:20px 22px;overflow-wrap:anywhere}
+.training-question .own-answer-panel{background:var(--surface-alt)}
+.training-question .model-answer-panel{background:var(--surface);border-top:3px solid var(--accent)}
+.training-question .answer-panel h3,.solution .model-answer-content h3{font-size:20px;line-height:1.4;margin-bottom:13px}
+.training-question .own-answer-text,.model-answer-content .model-answer-text,.solution .model-answer-content .model-answer-text{font-size:18px;line-height:1.7;margin:0;max-width:70ch;overflow-wrap:anywhere}
+.solution .model-answer-content{margin-bottom:19px}
+.solution-details-content p{font-size:15px;line-height:1.75}
+.solution-details-content h4{font-size:15px;margin-top:20px;margin-bottom:10px}
+.solution-details-content .checklist label{font-size:15px;line-height:1.6}
+.training-question .solution-explanation{border:1px solid var(--border);border-radius:9px;margin-bottom:14px;background:var(--surface-alt)}
+.training-question .solution-explanation>summary{padding:13px 17px;font-size:14px;font-weight:600;color:var(--accent-strong)}
+.training-question .solution-explanation .solution-details-content{padding:0 18px 17px}
+.training-question .solution-explanation .solution-details-content h4:first-child{margin-top:8px}
+.training-question .feedback-banner{padding:11px 14px;gap:10px;margin-bottom:12px;align-items:flex-start}
+.training-question .feedback-banner strong{font-size:13px;line-height:1.6}
+.training-question .feedback-banner p{font-size:12px;line-height:1.6;margin-top:2px}
+.training-question .feedback-banner.self{background:var(--surface-alt);color:var(--text)}
+.training-question .self-assessment{padding:14px 17px;margin-top:12px}
+.training-question .self-assessment h4{font-size:14px;margin-bottom:11px}
+.training-question .self-assessment .rating-buttons{gap:9px}
+.training-question .self-assessment .rating{padding:11px}
+.training-question .source-details{margin-top:18px}
+@media(max-width:650px){
+ .learning-training .learning-filters{padding:13px;gap:11px}
+ .question-card.training-question{padding:21px 18px}
+ .training-question .question-text{font-size:20px;line-height:1.5}
+ .training-question .answer-comparison{grid-template-columns:1fr;gap:13px}
+ .training-question .answer-panel{padding:17px}
+ .training-question .own-answer-text,.model-answer-content .model-answer-text,.solution .model-answer-content .model-answer-text{font-size:17px}
+ .training-question textarea.open-answer{font-size:17px;min-height:145px}
+ .training-question .answer-panel h3,.solution .model-answer-content h3{font-size:18px}
+ .training-question .question-actions{align-items:center;flex-wrap:wrap}
+}
