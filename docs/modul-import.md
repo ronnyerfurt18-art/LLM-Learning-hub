@@ -1,8 +1,10 @@
-# Modul-Import mit dem lokalen Modell (Stufe 1)
+# Modul-Import mit dem lokalen KI-Modell
 
 Neue Module lassen sich mit dem lokal angebundenen Ollama-Modell aufbereiten. Aus den erfassten Kursunterlagen entstehen ein **Lernseiten-Entwurf** und **Übungsfragen**. Nichts wird still übernommen: Fragen warten als Importdatei auf die Prüfung unter „Dokumente“, Lernseiten bleiben ein Entwurf, bis sie ausdrücklich veröffentlicht werden.
 
 ## Ablauf
+
+In der Homepage führt die Seite „Aufbereiten“ durch dieselben Schritte: Unterlagen hochladen, Einheiten wählen, Vorschau, starten, veröffentlichen, Big Picture. Die Bedienung beschreibt `docs/inhalte-einbinden.md`. Im Terminal:
 
 1. Modulordner im Studienordner ablegen und im Hub unter „Dokumente“ synchronisieren. Lehrbriefe brauchen eine Kurseinheit (wird aus Dateinamen wie `10001-02-S#1-…pdf` erkannt, sonst von Hand zuordnen).
 2. Vorschau ohne Modellaufruf: `.venv/bin/python tools/import_module.py --module 10001 --preview`
@@ -39,9 +41,11 @@ Chat, Import und Big Picture teilen sich das Modell und laufen nie gleichzeitig.
 - **Fortsetzen:** Jede fertige Modellantwort liegt in `data/module-import/`. Ein abgebrochener oder wiederholter Lauf fragt nur fehlende Abschnitte neu an. Ein anderes Modell oder eine geänderte Quelldatei erzeugt neue Antworten.
 - **Gleichzeitigkeit:** Im Hub gestartet, teilt sich der Import das Modell mit dem Lernchat; während eines Abschnitts meldet der Chat „beantwortet gerade eine Frage“.
 
-## Grenzen der Stufe 1
+## Grenzen
 
 - Das Big Picture entsteht in einem eigenen Schritt (siehe oben), nicht im Import. Keine Tabellen, keine Abbildungen, keine Videotranskripte; der Modulüberblick wird aus den Lernseiten zusammengestellt.
+- Eine veröffentlichte Einheit lässt sich über den Import nicht neu erzeugen.
+- Aufbereitung und Big Picture sind bisher nur mit einem Platzhalter statt eines echten KI-Modells geprüft.
 - Abschnitte folgen Seitenumfang, nicht Kapitelgrenzen.
 - Einsendearbeiten werden nicht aufbereitet; sie entstehen von Hand nach `docs/inhalte-einbinden.md`.
 - Die Zeitangabe der Vorschau (fünf Minuten je Abschnitt) ist eine grobe Annahme und noch nicht gemessen.
