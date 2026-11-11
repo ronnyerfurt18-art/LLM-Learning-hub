@@ -4,6 +4,28 @@ Die Rohfassung ist am 10.11.2026 aus dem privaten Master Learning Hub abgezweigt
 
 ---
 
+## 11.11.2026 – Aufbereiten in der Homepage: Upload, Start pro Einheit, Veröffentlichen, Big Picture
+
+**Veröffentlichen pro Einheit (`backend/module_import.py`, `backend/content_files.py`):** Gibt es für ein Modul schon Lernseiten, übernimmt das Veröffentlichen nur Einheiten, die dort fehlen, und ergänzt Modulüberblick und Lernpfad. Vorher wird geprüft und gesichert (`data/backups/`).
+
+**Upload (`backend/upload.py`):** `POST /api/documents/upload` legt Unterlagen im Modulordner des Studienordners ab. Grenzen: 300 MB, nur bekannte Dateitypen und `.mp4`, kein Überschreiben, keine Pfade.
+
+**Übersicht (`backend/module_import.py`):** `GET /api/module-import/overview` nennt je Einheit die Unterlagen, ob sie verwertbar sind, und den Stand (Entwurf, veröffentlicht). Vorschau und Übersicht nutzen dieselbe Regel.
+
+**Big Picture (`backend/big_picture.py`, `backend/local_generation.py`, `backend/learning_pages.py`):** Neuer Baustein mit `GET/POST /api/big-picture` und `POST /api/big-picture/publish`. Ein vorhandenes Big Picture wird nur auf ausdrückliche Bestätigung ersetzt. Neue optionale Felder `units` und `generated_by`.
+
+**Abschaltliste (`backend/local_model.py`, `backend/main.py`, `launcher.py`):** `features` in `tutor.local.json`; `/api/settings` nennt die aktiven Bausteine.
+
+**Fehler behoben (`backend/tutor.py`):** Der Modellwechsel im Lernchat entfernte `study_folder` aus `tutor.local.json`. Er behält jetzt alle Einstellungen außer Anbieter und KI-Modell.
+
+**Oberfläche (`frontend/src/ModuleImport.tsx`, `module-import.css`, `App.tsx`, `types.ts`, `ModuleBigPicture.tsx`):** Neue Seite „Aufbereiten“.
+
+**Geprüft:** Automatische Tests und ein Durchlauf im Browser mit einem Platzhalter statt eines KI-Modells. Nicht geprüft: echter Lauf mit Ollama, Lauf auf einem Mac.
+
+**Rückgängig machen:** `backend/upload.py`, `backend/big_picture.py`, `backend/content_files.py`, `backend/local_generation.py`, `frontend/src/ModuleImport.tsx` und `module-import.css` löschen und die Anmeldung der Routen in `backend/main.py` sowie den Menüpunkt in `App.tsx` entfernen; für das Veröffentlichen `publish()` in `backend/module_import.py` auf den Stand vom 10.11. zurücksetzen.
+
+---
+
 ## 10.11.2026 – Eigener Studienordner, Demo-Modul, Anleitung für Inhalte, Dokumente bereinigt
 
 **Studienordner (`backend/local_model.py`, `backend/main.py`, `launcher.py`, `tools/import_module.py`):** Bisher galt der Ordner über dem Projekt als Studienordner und wurde vollständig eingelesen. Jetzt gilt `study_folder` aus `tutor.local.json` (oder `MLH_SOURCE_ROOT`), sonst `~/LearningHub/Studium`. Der Standardordner wird beim Start angelegt; ein Ordner im Programmordner wird abgelehnt.

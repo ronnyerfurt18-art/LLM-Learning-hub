@@ -116,7 +116,29 @@ SQLite (data/learning.sqlite3)     Inhaltsdateien (content/, imports/)     Studi
 **Anlass:** Eine Änderung schien nicht zu wirken, weil `Start.command` bei laufendem Hub nur die vorhandene Seite öffnet.
 **Festgehalten:** Backend-Änderungen brauchen Ctrl+C im Startfenster und einen neuen Start. Oberflächenänderungen brauchen zusätzlich einen neuen Bau nach `frontend/dist` und ein Neuladen der Seite.
 
+### 11.11.2026 – Aufbereitung pro Einheit mit zwei Haltepunkten
+**Anlass:** Unterlagen treffen über das Semester verteilt ein. Bisher ließ sich ein Modul nur einmal veröffentlichen.
+**Entscheidung:** Der Auslöser liegt bei der Einheit. Erster Haltepunkt ist „Aufbereitung starten“ nach der Vorschau, zweiter „Lernseiten veröffentlichen“. Das Veröffentlichen ergänzt nur Einheiten, die noch fehlen; vorhandene Lernseiten und ein vorhandenes Big Picture bleiben unverändert. Vor jeder Änderung an einer Datei in `content/` entsteht eine Sicherung unter `data/backups/`.
+**Folge:** Eine bereits veröffentlichte Einheit lässt sich über den Import nicht neu erzeugen. Wer das will, entfernt sie von Hand aus der Datei.
+
+### 11.11.2026 – Der Hub schreibt erstmals in den Studienordner
+**Anlass:** Unterlagen sollen sich über die Homepage hochladen lassen.
+**Entscheidung:** `POST /api/documents/upload` legt Dateien im Modulordner ab, mit gewählter Einheit im Unterordner `Einheit <n>`. Der Hub überschreibt dort nie etwas, legt nichts außerhalb des Studienordners oder im Programmordner ab und löscht dort nichts. Alles andere im Studienordner liest er weiterhin nur.
+**Offen:** Die Einheit bestimmt weiterhin die Dokumentenerkennung; eine Nummer im Dateinamen hat Vorrang vor dem Ordner. Die Antwort des Uploads nennt deshalb die erkannte und die gewählte Einheit.
+
+### 11.11.2026 – Big Picture als eigener Baustein
+**Anlass:** Das Big Picture soll auch für Module entstehen können, deren Lernseiten nicht aus dem Import stammen.
+**Entscheidung:** `backend/big_picture.py` kennt weder den Modul-Import noch die Oberfläche. Eingang sind die veröffentlichten Lernseiten eines Moduls, Ausgang ist ein geprüfter Entwurf. Das KI-Modell sieht nur Titel, Zusammenfassung und Lernziele und liefert Bausteine und Beziehungen nach Position; IDs und Quellen setzt der Hub aus den Lernseiten. Das Feld `units` hält fest, welche Einheiten eingeflossen sind, damit der Hub ein veraltetes Big Picture erkennt.
+**Offen:** Die Qualität der Zusammenhänge mit einem echten KI-Modell ist nicht gemessen, auch nicht auf 16 GB.
+
+### 11.11.2026 – Bausteine im selben Prozess, abschaltbar
+**Anlass:** Die Frage, ob Funktionen als eigene Dienste laufen sollen.
+**Entscheidung:** Keine getrennten Dienste. Jeder Baustein ist eine Datei, die ihre Routen selbst anmeldet. `features` in `tutor.local.json` bestimmt, welche Bausteine geladen werden (`voice`, `module_import`, `big_picture`); die Oberfläche blendet die übrigen aus.
+**Begründung:** Getrennte Prozesse kosten Startzeit und Arbeitsspeicher, der auf 16 GB knapp ist. Eigene Prozesse bleiben die KI-Modelle (Ollama, Bonsai) und die Sprachverarbeitung.
+
 ## 5. Bekannte Lücken
 
-- Der Modul-Import hat noch keine Oberfläche und kein Big Picture.
+- Aufbereitung und Big Picture sind nur mit einem Platzhalter statt eines echten KI-Modells geprüft.
+- Die Übersicht je Einheit liest bei jedem Aufruf die Seitentexte aller Lehrbriefe; bei großen Modulen ist das langsam.
+- Hochgeladene Videos (`.mp4`) werden gespeichert, erscheinen aber nicht unter „Dokumente“.
 - Die Qualitätsprüfung deckt normale Lernseiten-Gespräche nur mit zwei Regeln ab; für den Planer gibt es keine Modellprüfung.
