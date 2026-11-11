@@ -623,8 +623,8 @@ def register_tutor_routes(app, hub, project_root, source_root):
                 raise HTTPException(503, 'Bonsai ist noch nicht vollständig heruntergeladen.')
             new = TutorService({'MLH_TUTOR_PROVIDER': provider, 'MLH_TUTOR_MODEL': model})
             pending = config_path.with_suffix('.json.pending')
-            # Machine settings (context window, runtime folders) survive a model switch.
-            keep = {key: config[key] for key in ('context_tokens', 'bonsai_runtime', 'voice_runtime') if key in config}
+            # Everything the switch does not decide itself (context window, runtime and study folders, features) survives.
+            keep = {key: value for key, value in config.items() if key not in ('enabled', 'provider', 'model', 'ollama_model')}
             pending.write_text(json.dumps({'enabled': True, 'provider': provider, 'model': model, 'ollama_model': fallback, **keep}, indent=2))
             pending.replace(config_path)
             old.configured = False

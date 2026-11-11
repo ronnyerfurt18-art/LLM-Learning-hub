@@ -7,6 +7,7 @@ imports/entwuerfe/ until they are published explicitly. Statements must be
 backed by a verbatim quote that is located in the source pages by the hub
 itself; the model never supplies page numbers.
 """
+import copy
 import hashlib
 import json
 import re
@@ -17,17 +18,17 @@ from pathlib import Path
 
 from fastapi import HTTPException
 
+from .content_files import PACKAGE_LOCK, backup_file, find_package, module_number, write_json
 from .core import validate_import
 from .learning_pages import validate_learning_page
-from .local_model import CONTEXT_TOKENS, KEEP_ALIVE, local_json, local_model_info
+from .local_generation import OUTPUT_TOKENS, REQUEST_TIMEOUT, ollama_generator as _ollama_generator, parse_json  # noqa: F401
+from .local_model import local_json
 
 PROMPT_VERSION = 1
 # Characters per model call; with instructions and answer this stays far inside CONTEXT_TOKENS.
 WINDOW_CHARS = 14000
 WINDOW_PAGES = 12
 MIN_PAGE_CHARS = 200
-OUTPUT_TOKENS = 6000
-REQUEST_TIMEOUT = 1200
 SOURCE_KINDS = ('course_material', 'lecture')
 QUESTION_TYPES = ('flashcard', 'single_choice', 'multiple_choice', 'free_text')
 MINUTES_PER_WINDOW = 5
@@ -141,16 +142,24 @@ def source_kind(row):
     return row.get('kind')
 
 
-def select_sources(hub, module_id, units=None):
-    """Indexed PDFs of the module grouped by unit; everything left out is named with its reason."""
+def plan_sources(hub, module_id, units=None):
+    """The single decision what the import can read.
+
+    Returns the usable sources, the files left out with their reason (shown by the preview) and the files that are
+    no candidate at all (other kinds, unreadable); the overview names those too.
+    """
     hub.module(module_id)
-    by_unit, skipped = {}, []
+    by_unit, skipped, ignored = {}, [], []
     for row in hub.documents():
-        row = {**row, 'kind': source_kind(row)}
-        if (row.get('module_id') != module_id or row['kind'] not in SOURCE_KINDS
-                or row.get('status') in ('error', 'missing')):
+        if row.get('module_id') != module_id or row['path'].startswith('@imports/'):
             continue
-        if row.get('extension') != '.pdf':
+        row = {**row, 'kind': source_kind(row)}
+        if row['kind'] not in SOURCE_KINDS:
+            ignored.append({'path': row['path'], 'reason': 'Weder Lehrbrief noch Folien; wird nicht aufbereitet.'})
+        elif row.get('status') in ('error', 'missing'):
+            ignored.append({'path': row['path'], 'reason': 'Die Datei ist nicht mehr vorhanden.' if row['status'] == 'missing'
+                            else 'Die Datei konnte nicht gelesen werden.'})
+        elif row.get('extension') != '.pdf':
             skipped.append({'path': row['path'], 'reason': 'Kein PDF; für Seitenbelege werden PDFs benötigt.'})
         elif type(row.get('unit')) is not int:
             skipped.append({'path': row['path'], 'reason': 'Keine Kurseinheit zugeordnet. Bitte unter „Dokumente“ zuordnen.'})
@@ -170,7 +179,53 @@ def select_sources(hub, module_id, units=None):
                 continue
             result.append({'unit': unit, 'path': row['path'], 'kind': row['kind'], 'sha256': document.get('sha256'),
                            'pages': document.get('pages', 0), 'windows': windows})
+    return result, skipped, ignored
+
+
+def select_sources(hub, module_id, units=None):
+    """Indexed PDFs of the module grouped by unit; everything left out is named with its reason."""
+    result, skipped, _ = plan_sources(hub, module_id, units)
     return result, skipped
+
+
+def draft_path(project, module):
+    return Path(project) / 'imports' / DRAFTS / f"{module.get('number') or _slug(module['name'])}-learning-pages.json"
+
+
+def _lesson_counts(package):
+    counts = {}
+    for lesson in package.get('lessons', []) if isinstance(package, dict) and isinstance(package.get('lessons'), list) else []:
+        if isinstance(lesson, dict) and type(lesson.get('unit')) is int:
+            counts[lesson['unit']] = counts.get(lesson['unit'], 0) + 1
+    return counts
+
+
+def overview(hub, project, module_id):
+    """Documents, drafts and published lessons per unit: what the module import screen shows."""
+    module = hub.module(module_id)
+    sources, skipped, ignored = plan_sources(hub, module_id)
+    usable = {source['path'] for source in sources}
+    reasons = {item['path']: item['reason'] for item in skipped + ignored}
+    units, loose = {}, []
+    for row in sorted((row for row in hub.documents() if row.get('module_id') == module_id and not row['path'].startswith('@imports/')),
+                      key=lambda row: row['path']):
+        item = {'path': row['path'], 'name': row.get('name') or Path(row['path']).name, 'kind': source_kind(row),
+                'pages': row.get('pages', 0), 'usable': row['path'] in usable, 'reason': reasons.get(row['path'])}
+        if type(row.get('unit')) is int:
+            units.setdefault(row['unit'], []).append(item)
+        else:
+            loose.append(item)
+    draft_file = draft_path(project, module)
+    try:
+        draft = json.loads(draft_file.read_text(encoding='utf-8')) if draft_file.is_file() else {}
+    except (ValueError, OSError):
+        draft = {}
+    _, published = find_package(project, module_number(module))
+    drafted, released = _lesson_counts(draft), _lesson_counts(published)
+    return {'module_id': module_id, 'module_number': module.get('number') or '',
+            'units': [{'unit': unit, 'documents': units.get(unit, []), 'draft_lessons': drafted.get(unit, 0),
+                       'published_lessons': released.get(unit, 0)} for unit in sorted({*units, *drafted, *released})],
+            'unassigned_documents': loose, 'draft': bool(drafted), 'has_learning_pages': published is not None}
 
 
 def preview(hub, module_id, units=None):
@@ -183,34 +238,9 @@ def preview(hub, module_id, units=None):
             'skipped': skipped}
 
 
-def parse_json(text):
-    """Model answer as an object; tolerates code fences and stray text around it."""
-    if not isinstance(text, str):
-        raise ValueError('Keine Textantwort.')
-    start, end = text.find('{'), text.rfind('}')
-    if start < 0 or end <= start:
-        raise ValueError('Kein JSON-Objekt in der Antwort.')
-    value = json.loads(text[start:end + 1])
-    if not isinstance(value, dict):
-        raise ValueError('Antwort ist kein JSON-Objekt.')
-    return value
-
-
 def ollama_generator(model, request=local_json):
-    """One bounded local call per window. Raises ValueError if the model is not usable."""
-    info = local_model_info(model, request)
-    thinking = 'thinking' in info.get('capabilities', [])
-
-    def generate(messages, structured=True):
-        payload = {'model': model, 'messages': messages, 'stream': False, 'keep_alive': KEEP_ALIVE,
-                   'options': {'num_ctx': CONTEXT_TOKENS, 'num_predict': OUTPUT_TOKENS, 'temperature': 0.2}}
-        if structured:
-            payload['format'] = SCHEMA
-        if thinking:
-            payload['think'] = False
-        result = request('/api/chat', payload, timeout=REQUEST_TIMEOUT)
-        return parse_json((result.get('message') or {}).get('content'))
-    return generate
+    """Generator for the lesson and question schema of this module."""
+    return _ollama_generator(model, request, SCHEMA, OUTPUT_TOKENS)
 
 
 def window_messages(module, source, window):
@@ -354,7 +384,8 @@ class ModuleImport:
 
     def __init__(self, hub, project_root, source_root, data_dir=None):
         self.hub, self.project, self.source = hub, Path(project_root), Path(source_root)
-        self.cache = Path(data_dir or self.project / 'data') / 'module-import'
+        self.data = Path(data_dir or self.project / 'data')
+        self.cache = self.data / 'module-import'
         self._lock, self._cancel, self._thread = threading.Lock(), threading.Event(), None
         self._state = {'state': 'idle', 'messages': []}
 
@@ -369,7 +400,7 @@ class ModuleImport:
                 self._state['messages'] = (self._state['messages'] + [message])[-60:]
 
     def draft_path(self, module):
-        return self.project / 'imports' / DRAFTS / f"{module.get('number') or _slug(module['name'])}-learning-pages.json"
+        return draft_path(self.project, module)
 
     def start(self, module_id, units, model, generate, gate=None):
         with self._lock:
@@ -501,30 +532,105 @@ class ModuleImport:
         return outputs
 
     def publish(self, module_id):
-        """Copy a valid draft to content/; existing learning pages are never replaced."""
+        """Copy a valid draft to content/. A module that is already published only gains the units it does not have."""
         module = self.hub.module(module_id)
         draft = self.draft_path(module)
         if not draft.is_file():
             raise KeyError('Für dieses Modul liegt kein Lernseiten-Entwurf vor.')
         package = json.loads(draft.read_text(encoding='utf-8'))
-        errors = validate_learning_page(package, self.source, self.project)
-        if errors:
-            raise ValueError('Der Entwurf ist noch nicht gültig: ' + '; '.join(errors[:10]))
+        if not isinstance(package, dict):
+            raise ValueError('Der Entwurf ist kein gültiges Lernpaket.')
         content = self.project / 'content'
-        content.mkdir(exist_ok=True)
-        for path in content.glob('*.json'):
-            try:
-                existing = json.loads(path.read_text(encoding='utf-8'))
-            except ValueError:
-                continue
-            if isinstance(existing, dict) and existing.get('module_number') == package['module_number']:
-                raise ValueError(f'Für dieses Modul gibt es bereits Lernseiten ({path.name}). Sie werden nicht überschrieben; '
-                                 f'der Entwurf bleibt unter {draft.relative_to(self.project).as_posix()}.')
-        target = content / f"{_slug(module['name']).replace('_', '-')}-learning-pages.json"
-        if target.exists():
-            raise ValueError(f'{target.name} ist bereits vorhanden und wird nicht überschrieben.')
-        target.write_text(json.dumps(package, ensure_ascii=False, indent=1), encoding='utf-8')
-        return {'published': target.relative_to(self.project).as_posix(), 'lessons': len(package['lessons'])}
+        with PACKAGE_LOCK:
+            number = package.get('module_number')
+            target, existing = find_package(self.project, number) if isinstance(number, str) else (None, None)
+            if target is None:
+                errors = validate_learning_page(package, self.source, self.project)
+                if errors:
+                    raise ValueError('Der Entwurf ist noch nicht gültig: ' + '; '.join(errors[:10]))
+                content.mkdir(exist_ok=True)
+                target = content / f"{_slug(module['name']).replace('_', '-')}-learning-pages.json"
+                if target.exists():
+                    raise ValueError(f'{target.name} ist bereits vorhanden und wird nicht überschrieben.')
+                write_json(target, package)
+                units = sorted({lesson['unit'] for lesson in package['lessons']})
+                return {'published': target.relative_to(self.project).as_posix(), 'lessons': len(package['lessons']),
+                        'added_units': units, 'skipped_units': []}
+            merged, added, skipped = merge_package(existing, package)
+            errors = validate_learning_page(merged, self.source, self.project)
+            if errors:
+                raise ValueError('Das ergänzte Lernpaket wäre nicht gültig, es wurde nichts geschrieben: ' + '; '.join(errors[:10]))
+            backup_file(target, self.data)
+            write_json(target, merged)
+            return {'published': target.relative_to(self.project).as_posix(), 'lessons': len(added['lessons']),
+                    'added_units': added['units'], 'skipped_units': skipped}
+
+
+_PATH_UNIT = re.compile(r'^Kurseinheit\s+(\d+)\b')
+
+
+def _insert_by_unit(items, additions, unit_of):
+    """Insert each addition before the first item of a higher unit; the existing order stays as it is."""
+    for addition in additions:
+        position = next((index for index, item in enumerate(items) if (unit_of(item) or 0) > unit_of(addition)), len(items))
+        items.insert(position, addition)
+
+
+def merge_package(existing, draft):
+    """Published package plus the draft lessons of units it does not contain yet.
+
+    Returns (merged copy, {'lessons': [...], 'units': [...]}, skipped units). Nothing existing is changed.
+    """
+    merged = copy.deepcopy(existing)
+    lessons, overview = merged.get('lessons'), merged.get('overview')
+    if not isinstance(lessons, list) or not isinstance(overview, dict):
+        raise ValueError('Die veröffentlichte Lernseiten-Datei ist unvollständig; sie wird nicht ergänzt.')
+    rows = [lesson for lesson in lessons if isinstance(lesson, dict)]
+    have_units = {lesson['unit'] for lesson in rows if type(lesson.get('unit')) is int}
+    have_ids = {lesson['id'] for lesson in rows if isinstance(lesson.get('id'), str)}
+    drafted = [lesson for lesson in draft.get('lessons', []) if isinstance(lesson, dict)] if isinstance(draft.get('lessons'), list) else []
+    new = []
+    for lesson in drafted:
+        if (type(lesson.get('unit')) is int and lesson['unit'] in have_units) or (isinstance(lesson.get('id'), str) and lesson['id'] in have_ids):
+            continue
+        if isinstance(lesson.get('id'), str):
+            have_ids.add(lesson['id'])
+        new.append(lesson)
+    units = sorted({lesson['unit'] for lesson in new if type(lesson.get('unit')) is int})
+    if not new:
+        raise ValueError('Alle Einheiten des Entwurfs sind bereits veröffentlicht.')
+    skipped = sorted({lesson['unit'] for lesson in drafted if type(lesson.get('unit')) is int} - set(units))
+    _insert_by_unit(lessons, copy.deepcopy(new), lambda lesson: lesson.get('unit') if isinstance(lesson, dict) and type(lesson.get('unit')) is int else 0)
+
+    draft_overview = draft.get('overview') if isinstance(draft.get('overview'), dict) else {}
+    complete = {unit for unit in units if all(lesson in new for lesson in drafted if lesson.get('unit') == unit)}
+    known = overview.get('units') if isinstance(overview.get('units'), list) else []
+    overview['units'] = known
+    entries, paths = [], []
+    for unit in units:
+        mine = [lesson for lesson in new if lesson.get('unit') == unit]
+        titles = [lesson['title'] for lesson in mine if isinstance(lesson.get('title'), str)]
+        entry = next((item for item in draft_overview.get('units', []) if isinstance(item, dict) and item.get('unit') == unit), None) \
+            if isinstance(draft_overview.get('units'), list) else None
+        if not (entry and unit in complete):
+            entry = {'unit': unit, 'title': f'Kurseinheit {unit}', 'description': mine[0].get('summary') or f'Kurseinheit {unit}', 'topics': titles}
+        if not any(isinstance(item, dict) and item.get('unit') == unit for item in known):
+            entries.append(copy.deepcopy(entry))
+        line = next((text for text in draft_overview.get('learning_path', []) if isinstance(text, str)
+                     and (match := _PATH_UNIT.match(text)) and int(match.group(1)) == unit), None) \
+            if isinstance(draft_overview.get('learning_path'), list) else None
+        paths.append((unit, line if line and unit in complete else f'Kurseinheit {unit}: ' + ' → '.join(titles)))
+    _insert_by_unit(known, entries, lambda item: item.get('unit') if isinstance(item, dict) and type(item.get('unit')) is int else 0)
+    path = overview.get('learning_path')
+    if not isinstance(path, list):
+        path = overview['learning_path'] = []
+
+    def path_unit(text):
+        match = _PATH_UNIT.match(text) if isinstance(text, str) else None
+        return int(match.group(1)) if match else 0
+    present = {path_unit(text) for text in path}
+    _insert_by_unit(path, [text for unit, text in paths if unit not in present], path_unit)
+    return merged, {'lessons': new, 'units': units}, skipped
 
 
 def register_module_import_routes(app, hub, project_root, source_root, data_dir=None):
@@ -548,6 +654,10 @@ def register_module_import_routes(app, hub, project_root, source_root, data_dir=
     @app.get('/api/module-import/preview')
     def import_preview(module_id: str):
         return preview(hub, module_id)
+
+    @app.get('/api/module-import/overview')
+    def import_overview(module_id: str):
+        return overview(hub, project_root, module_id)
 
     @app.get('/api/module-import')
     def import_status():

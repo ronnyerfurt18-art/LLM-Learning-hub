@@ -26,7 +26,9 @@ from .core import Hub, iso, norm, validate_import
 from .documents import generate_proposals, scan_documents
 from .planning import register_planning_routes
 from .planner import register_planner_routes
+from .big_picture import register_big_picture_routes
 from .module_import import register_module_import_routes
+from .upload import register_upload_routes
 from .quality import register_quality_routes
 from .learning_memory import register_memory_routes
 from .tutor import register_tutor_routes
@@ -34,7 +36,7 @@ from .voice import register_voice_routes
 from .lernwiki import register_wiki_routes
 from .search import register_search_routes
 from .assignments import assignment_module_numbers, assignments_for_module
-from .local_model import study_folder
+from .local_model import active_features, study_folder
 from .practice import register_practice_routes
 from .learning_pages import (
     SOURCE_MEDIA_TYPES, SourceAccessError, load_learning_pages,
@@ -70,6 +72,7 @@ def create_app(source_root=None, data_dir=None, project_root=None, start_watch=T
     source = Path(source_root or study_folder(project)).resolve()
     data = Path(data_dir or os.environ.get('MLH_DATA_DIR', str(project / 'data'))).resolve()
     hub = Hub(data / 'learning.sqlite3')
+    features = active_features()
     ai = DisabledProvider()
     lock, scan_lock, stop = threading.RLock(), threading.Lock(), threading.Event()
     interval = max(10, int(os.environ.get('MLH_SCAN_INTERVAL', '30')))
@@ -265,7 +268,7 @@ def create_app(source_root=None, data_dir=None, project_root=None, start_watch=T
 
     @app.get('/api/settings')
     def settings():
-        return {'source_root': str(source), 'scan_interval_seconds': interval, 'database_path': str(hub.path), 'ai': {'enabled': ai.enabled, 'provider': ai.name}, 'tutor': app.state.tutor.status()}
+        return {'source_root': str(source), 'scan_interval_seconds': interval, 'database_path': str(hub.path), 'ai': {'enabled': ai.enabled, 'provider': ai.name}, 'tutor': app.state.tutor.status(), 'features': features}
 
     @app.get('/api/assets/{asset_path:path}')
     def source_asset(asset_path: str):
@@ -590,9 +593,15 @@ def create_app(source_root=None, data_dir=None, project_root=None, start_watch=T
     register_memory_routes(app, hub, project)
     register_tutor_routes(app, hub, project, source)
     register_planner_routes(app, hub, project, source)
-    register_module_import_routes(app, hub, project, source, data)
+    # A switched-off feature has no routes at all: they answer 404 like any unknown address.
+    if 'module_import' in features:
+        register_module_import_routes(app, hub, project, source, data)
+        register_upload_routes(app, hub, project, source)
+    if 'big_picture' in features:
+        register_big_picture_routes(app, hub, project, source, data)
     register_quality_routes(app, hub)
-    register_voice_routes(app)
+    if 'voice' in features:
+        register_voice_routes(app)
     register_wiki_routes(app, hub, project, source)
     register_search_routes(app, hub, source, project)
     register_practice_routes(app, hub, lock)

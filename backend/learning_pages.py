@@ -23,6 +23,7 @@ SOURCE_MEDIA_TYPES = {
     '.ics': 'text/calendar', '.png': 'image/png', '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
 }
+BIG_PICTURE_NODES = (3, 7)
 _PRIVATE_COMPONENTS = {'.git', '.venv', 'venv', 'node_modules', '__pycache__', '.agents', '.codex', '.aws'}
 
 
@@ -266,10 +267,17 @@ def validate_learning_page(content, source_root, project_root):
         else:
             for field in ('title', 'central_question', 'intro', 'takeaway'):
                 text(picture.get(field), f'{where}.{field}')
+            if 'generated_by' in picture:
+                text(picture['generated_by'], f'{where}.generated_by')
+            if 'units' in picture:
+                picture_units = picture['units']
+                if not isinstance(picture_units, list) or any(type(unit) is not int or unit < 1 for unit in picture_units):
+                    fail(f'{where}.units', 'Liste positiver ganzer Zahlen (Kurseinheiten) benötigt.')
             nodes = picture.get('nodes')
             node_ids = set()
-            if not isinstance(nodes, list) or not 3 <= len(nodes) <= 7:
-                fail(f'{where}.nodes', 'drei bis sieben Kernkonzepte benötigt.')
+            low, high = BIG_PICTURE_NODES
+            if not isinstance(nodes, list) or not low <= len(nodes) <= high:
+                fail(f'{where}.nodes', 'drei bis sieben Kernkonzepte benötigt.')  # wording follows BIG_PICTURE_NODES
             else:
                 for i, node in enumerate(nodes):
                     label = f'{where}.nodes[{i}]'

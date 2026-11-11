@@ -39,6 +39,27 @@ def study_folder(project=None):
     return Path(configured or Path.home() / 'LearningHub' / 'Studium').expanduser()
 
 
+FEATURES = ('voice', 'module_import', 'big_picture')
+
+
+def check_features(items, where='features'):
+    """Known feature names in a fixed order; anything else is an error the person can read."""
+    if not isinstance(items, list) or any(not isinstance(item, str) for item in items):
+        raise ValueError(f'{where} muss eine Liste von Namen sein. Bekannt: {", ".join(FEATURES)}.')
+    unknown = sorted({item for item in items if item not in FEATURES})
+    if unknown:
+        raise ValueError(f'{where} enthält unbekannte Werte: {", ".join(unknown)}. Bekannt: {", ".join(FEATURES)}.')
+    return [name for name in FEATURES if name in items]
+
+
+def active_features(environ=None):
+    """Features the hub offers: MLH_FEATURES (comma separated, set by the launcher); not set means all of them."""
+    raw = (os.environ if environ is None else environ).get('MLH_FEATURES')
+    if raw is None:
+        return list(FEATURES)
+    return check_features([item.strip() for item in raw.split(',') if item.strip()], 'MLH_FEATURES')
+
+
 CONTEXT_TOKENS = context_tokens()
 KEEP_ALIVE = '15m'
 

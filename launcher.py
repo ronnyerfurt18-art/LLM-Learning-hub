@@ -38,7 +38,7 @@ def is_our_hub(status):
 def configure():
     config_path = PROJECT / 'tutor.local.json'
     config = json.loads(config_path.read_text()) if config_path.exists() else {}
-    if not isinstance(config, dict) or set(config) - {'model', 'enabled', 'provider', 'ollama_model', 'context_tokens', 'bonsai_runtime', 'voice_runtime', 'study_folder'}:
+    if not isinstance(config, dict) or set(config) - {'model', 'enabled', 'provider', 'ollama_model', 'context_tokens', 'bonsai_runtime', 'voice_runtime', 'study_folder', 'features'}:
         raise ValueError('tutor.local.json enthält unbekannte Einstellungen.')
     model = config.get('model', 'llama3.1:8b')
     if not isinstance(model, str) or not model.strip():
@@ -55,6 +55,8 @@ def configure():
             if not isinstance(config[key], str) or not config[key].strip():
                 raise ValueError(f'{key} in tutor.local.json muss ein Ordnerpfad sein.')
             os.environ[variable] = config[key]
+    if 'features' in config:
+        os.environ['MLH_FEATURES'] = ','.join(local_model.check_features(config['features'], 'features in tutor.local.json'))
     if 'context_tokens' in config:
         if type(config['context_tokens']) is not int or not 8192 <= config['context_tokens'] <= 131072:
             raise ValueError('context_tokens in tutor.local.json muss zwischen 8192 und 131072 liegen.')

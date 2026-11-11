@@ -96,7 +96,7 @@ Eine Datei je Modul. Beispiel: `demo/content/lernen-lernen-learning-pages.json`.
 | `schema_version` | `1` |
 | `module_number`, `module_title` | Fünfstellige Modulnummer als Text und Titel |
 | `overview` | Titel, Absätze, Quellen, Liste der Einheiten, Lernpfad, optional `big_picture` |
-| `overview.big_picture` | Leitfrage, Bausteine (`nodes`) und Beziehungen (`connections`); Bausteine verweisen über `lesson_ids` auf Lernseiten |
+| `overview.big_picture` | Leitfrage, Bausteine (`nodes`) und Beziehungen (`connections`); Bausteine verweisen über `lesson_ids` auf Lernseiten. Optional `units` (Liste der eingeflossenen Einheiten) und `generated_by` (Herkunft); beide setzt der Hub, wenn er das Big Picture erstellt |
 | `lessons` | Je Lernseite: `id`, `unit`, Titel, Zusammenfassung, Lernziele, Abschnitte, `exercise_ids` |
 | `lessons[].sections` | `id`, Titel, Absätze, optional `bullets`, `table`, `note`; mindestens eine Quelle |
 

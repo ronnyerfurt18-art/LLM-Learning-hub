@@ -158,10 +158,11 @@ def test_import_writes_pending_questions_and_a_draft_that_is_published_explicitl
 
             published = client.post('/api/module-import/publish', json={'module_id': mid})
             assert published.status_code == 200, published.text
-            assert published.json() == {'published': 'content/business-intelligence-learning-pages.json', 'lessons': 1}
+            assert published.json() == {'published': 'content/business-intelligence-learning-pages.json', 'lessons': 1,
+                                        'added_units': [1], 'skipped_units': []}
             assert client.get(f'/api/learning-pages/{mid}').json()['lessons'][0]['title'] == 'Metadaten im Data Warehouse'
             again = client.post('/api/module-import/publish', json={'module_id': mid})
-            assert again.status_code == 400 and 'nicht überschrieben' in again.json()['detail']
+            assert again.status_code == 400 and 'bereits veröffentlicht' in again.json()['detail']
 
             # The pending file appears in the existing document review.
             client.post('/api/scan', json={})

@@ -56,6 +56,7 @@ Es sollte immer nur ein großes KI-Modell geladen sein. Arbeitsspeicher lässt s
 | `study_folder` | Ordner mit den Lernunterlagen. Standard: `~/LearningHub/Studium`. Der Hub liest ihn vollständig ein; er darf nicht im Programmordner liegen. |
 | `bonsai_runtime` | Ordner der Bonsai-Laufzeit. Standard: `~/.learning-hub/runtimes/bonsai-demo` |
 | `voice_runtime` | Ordner der Sprach-Laufzeit. Standard: `~/.learning-hub/runtimes/voice` |
+| `features` | Liste der aktiven Bausteine: `voice`, `module_import`, `big_picture`. Ohne den Schlüssel sind alle aktiv. |
 
 Umgebungsvariablen: `MLH_PORT`, `MLH_DATA_DIR`, `MLH_SOURCE_ROOT`, `MLH_LOCAL_CONTEXT_CHARS`, `MLH_CONTEXT_TOKENS`, `MLH_BONSAI_RUNTIME`, `MLH_VOICE_RUNTIME`.
 
