@@ -184,3 +184,25 @@ def test_failed_model_answers_are_reported_and_do_not_stop_the_run():
         other = app.state.hub.add_module({'name': 'Leeres Modul', 'number': '31311'})['id']
         empty = app.state.module_import.run(other, None, 'test', generate)
         assert empty['state'] == 'error' and 'keine verwertbaren PDF-Kursunterlagen' in empty['messages'][-1]
+
+
+def test_unclassified_pdfs_are_used_only_when_a_unit_has_nothing_better(tmp_path):
+    from backend.module_import import plan_sources
+    source, project, app, mid = _setup(tmp_path)
+    hub = app.state.hub
+    _documents(hub, mid)
+    extra = [('32711 BI/Einheit 1/kapitel-a.pdf', 'other', 1), ('32711 BI/Einheit 3/kapitel-b.pdf', 'other', 3),
+             ('32711 BI/Einheit 3/altklausur.pdf', 'exam', 3)]
+    with hub.db() as db:
+        for path, kind, unit in extra:
+            doc = {'path': path, 'name': Path(path).name, 'title': Path(path).stem, 'extension': '.pdf', 'kind': kind,
+                   'unit': unit, 'module_id': mid, 'status': 'pending', 'sha256': 'abc', 'pages': 5,
+                   'page_texts': [{'page': 4, 'label': 'Seite 4', 'text': PAGE_ONE}, {'page': 5, 'label': 'Seite 5', 'text': PAGE_TWO}]}
+            db.execute('INSERT INTO documents(path,module_id,payload) VALUES(?,?,?)', (path, mid, json.dumps(doc)))
+    usable, skipped, ignored = plan_sources(hub, mid)
+    assert [(item['unit'], Path(item['path']).name, item['kind']) for item in usable] == [
+        (1, '32711-01-lehrbrief.pdf', 'course_material'), (3, 'kapitel-b.pdf', 'other')]
+    reasons = {Path(item['path']).name: item['reason'] for item in skipped + ignored}
+    assert reasons['kapitel-a.pdf'] == 'Nicht verwendet, weil für die Kurseinheit ein Lehrbrief oder Folien vorliegen.'
+    assert reasons['folien1.pdf'] == 'Folien nicht verwendet, weil für die Kurseinheit ein Lehrbrief vorliegt.'
+    assert reasons['altklausur.pdf'].startswith('Nach dem Dateinamen keine Lernunterlage')

@@ -48,3 +48,5 @@
 @media(max-width:680px){.big-picture-relations ul,.big-picture-lessons ul{grid-template-columns:1fr}.big-picture-node>strong{font-size:16px}.big-picture-question>strong{font-size:17px}}
 @media(max-width:520px){.module-big-picture{padding:23px 18px}.big-picture-heading h2{font-size:24px}.big-picture-heading>p{font-size:13px}.big-picture-map{grid-template-columns:1fr;gap:23px}.big-picture-node{min-height:0;padding:16px 17px;gap:9px}.big-picture-node.is-selected{padding:15px 16px}.big-picture-role{font-size:13px}.big-picture-question{padding:16px}.big-picture-detail{padding:20px 15px}.big-picture-detail>p{font-size:14px}.big-picture-detail-entry{align-items:flex-start;flex-direction:column;gap:9px}.big-picture-heading h2,.big-picture-node>strong,.big-picture-relations button{overflow-wrap:anywhere}}
 @media(prefers-reduced-motion:reduce){.big-picture-node{transition:none}}
+
+.big-picture-origin{font-size:11px;line-height:1.7;color:var(--muted);margin:14px 0 0}

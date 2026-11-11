@@ -33,7 +33,7 @@ Chat, Import und Big Picture teilen sich das Modell und laufen nie gleichzeitig.
 
 ## Wie gearbeitet wird
 
-- **Quellen:** PDFs der Art Lehrbrief; Folien nur, wenn für die Kurseinheit kein Lehrbrief vorliegt. Verzeichnisse und fast leere Seiten werden ausgelassen. Was nicht verwendet wird, nennt die Vorschau mit Grund.
+- **Quellen:** PDFs der Art Lehrbrief; Folien nur, wenn für die Kurseinheit kein Lehrbrief vorliegt; andere PDFs nur, wenn beides fehlt. Unterlagen, die der Hub als Klausur, Lösung, Übung oder Zusammenfassung erkennt, bleiben außen vor. Verzeichnisse und fast leere Seiten werden ausgelassen. Was nicht verwendet wird, nennt die Vorschau mit Grund.
 - **Abschnitte:** Aufeinanderfolgende Seiten bis etwa 14.000 Zeichen ergeben einen Modellaufruf und eine Lernseite. Kontextfenster 32.768 Tokens, Antwort bis 6.000 Tokens, strukturierte JSON-Ausgabe.
 - **Belege:** Das Modell liefert zu jedem Abschnitt und jeder Frage ein wörtliches Zitat. Der Hub sucht das Zitat selbst in den Seitentexten und setzt die PDF-Seite; das Modell vergibt keine Seitenzahlen. Fragen ohne auffindbares Zitat werden verworfen, Abschnitte ohne auffindbares Zitat bleiben mit Prüfhinweis und dem Seitenbereich des Ausschnitts erhalten.
 - **Fortsetzen:** Jede fertige Modellantwort liegt in `data/module-import/`. Ein abgebrochener oder wiederholter Lauf fragt nur fehlende Abschnitte neu an. Ein anderes Modell oder eine geänderte Quelldatei erzeugt neue Antworten.

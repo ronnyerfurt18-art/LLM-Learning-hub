@@ -1,0 +1,61 @@
+.import-step{margin-bottom:22px;min-width:0}
+.import-step>h2,.import-step .section-head h2{display:flex;align-items:center;gap:11px;font-size:17px;margin:0 0 18px}
+.import-step .section-head{margin-bottom:16px}
+.import-step .section-head h2{margin:0}
+.import-number{display:inline-grid;place-items:center;flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent-light);color:var(--accent);border:1px solid var(--border);font-size:13px;font-weight:700}
+.import-step h3{font-size:14px;margin:20px 0 9px}
+.import-step h4{font-size:12px;margin:16px 0 8px;color:var(--muted)}
+.import-step p{font-size:13px;line-height:1.7}
+.import-step select,.import-step input[type=file]{max-width:100%;width:100%}
+.import-upload-controls{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:20px}
+.import-files,.import-units,.import-documents,.import-messages,.import-nodes,.import-connections,.import-errors{list-style:none;margin:0;padding:0}
+.import-files{margin:0 0 16px;border:1px solid var(--border);border-radius:9px;overflow:hidden}
+.import-file{display:flex;justify-content:space-between;gap:16px;padding:10px 14px;font-size:12px;border-bottom:1px solid var(--border)}
+.import-file:last-child{border-bottom:0}
+.import-file-name{overflow-wrap:anywhere;font-weight:600}
+.import-file-state{color:var(--muted);text-align:right;overflow-wrap:anywhere;max-width:60%}
+.import-file.error .import-file-state{color:var(--red)}
+.import-file.done .import-file-state{color:var(--green)}
+.import-live{min-height:1.5em;margin:12px 0 0;font-size:12px}
+.import-units{display:grid;gap:12px}
+.import-unit{display:flex;align-items:flex-start;gap:14px;padding:15px 17px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.import-unit.is-selected{border-color:var(--accent);background:var(--accent-light)}
+.import-unit input[type=checkbox]{width:20px;height:20px;margin-top:3px;flex-shrink:0;accent-color:var(--accent)}
+.import-unit-body{min-width:0;flex:1}
+.import-unit-title{display:block;font-weight:700;font-size:14px;margin-bottom:6px}
+.import-unit-state{display:block;font-size:12px;margin-bottom:8px}
+.import-documents li{font-size:12px;line-height:1.6;padding:3px 0;overflow-wrap:anywhere}
+.import-document-name{font-weight:600}
+.import-reason{display:block;color:var(--yellow);font-size:11px}
+.import-none{font-size:12px;margin:0}
+.import-unassigned{margin:18px 0 0}
+.import-preview,.import-run,.import-publish,.import-draft{margin-top:20px;padding-top:4px}
+.import-run p{margin:10px 0}
+.import-messages{max-height:200px;overflow:auto;border:1px solid var(--border);border-radius:9px;background:var(--surface-alt);padding:8px 12px}
+.import-messages li{font-size:12px;line-height:1.6;padding:3px 0;overflow-wrap:anywhere}
+.import-result{margin-top:18px}
+.import-counts{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:6px 0 4px}
+.import-counts div{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text)}
+.import-counts dt{font-size:11px;color:var(--muted)}
+.import-counts dd{margin:3px 0 0;font-size:20px;font-weight:700}
+.import-errors{font-size:12px;margin-top:6px}
+.import-errors li{padding:2px 0;overflow-wrap:anywhere}
+.import-picture-state{margin:0 0 14px}
+.import-question{padding:12px 15px;border-left:3px solid var(--accent);background:var(--accent-light);border-radius:6px}
+.import-question span{display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.import-nodes{display:grid;gap:10px;counter-reset:node}
+.import-nodes li{counter-increment:node;border:1px solid var(--border);border-radius:9px;padding:12px 15px;font-size:13px}
+.import-nodes li p{margin:5px 0 0;font-size:12px}
+.import-nodes li::before{content:counter(node,decimal-leading-zero) ' ';font-weight:700;color:var(--accent)}
+.import-connections li{font-size:12px;line-height:1.6;padding:4px 0;overflow-wrap:anywhere}
+.import-step a.button{text-decoration:none}
+@media(max-width:780px){.import-upload-controls{grid-template-columns:1fr;gap:0}}
+@media(max-width:520px){
+  .import-step{padding:18px 15px}
+  .import-file{flex-direction:column;gap:3px}
+  .import-file-state{text-align:left;max-width:100%}
+  .import-unit{padding:13px}
+  .import-step .button-row>.button{flex:1 1 auto;justify-content:center}
+}
+.import-step .button{white-space:normal}
+.import-step .button-row>.muted{font-size:12px}

@@ -14,11 +14,13 @@ Die Rohfassung ist am 10.11.2026 aus dem privaten Master Learning Hub abgezweigt
 
 **Big Picture (`backend/big_picture.py`, `backend/local_generation.py`, `backend/learning_pages.py`):** Neuer Baustein mit `GET/POST /api/big-picture` und `POST /api/big-picture/publish`. Ein vorhandenes Big Picture wird nur auf ausdrückliche Bestätigung ersetzt. Neue optionale Felder `units` und `generated_by`.
 
+**Quellenwahl (`backend/module_import.py`):** PDFs, die der Hub weder als Lehrbrief noch als Folien erkennt, werden aufbereitet, wenn die Einheit nichts Besseres hat. Bisher blieben sie außen vor, was hochgeladene Dateien mit freiem Namen ausschloss.
+
 **Abschaltliste (`backend/local_model.py`, `backend/main.py`, `launcher.py`):** `features` in `tutor.local.json`; `/api/settings` nennt die aktiven Bausteine.
 
 **Fehler behoben (`backend/tutor.py`):** Der Modellwechsel im Lernchat entfernte `study_folder` aus `tutor.local.json`. Er behält jetzt alle Einstellungen außer Anbieter und KI-Modell.
 
-**Oberfläche (`frontend/src/ModuleImport.tsx`, `module-import.css`, `App.tsx`, `types.ts`, `ModuleBigPicture.tsx`):** Neue Seite „Aufbereiten“.
+**Oberfläche (`frontend/src/ModuleImport.tsx`, `module-import.css`, `App.tsx`, `Documents.tsx`, `types.ts`, `ModuleBigPicture.tsx`):** Neue Seite „Aufbereiten“ mit den Schritten Modul wählen, Unterlagen hochladen, Einheiten, Aufbereiten und Big Picture. Der Menüpunkt erscheint nur bei aktivem Baustein. Ein erzeugtes Big Picture trägt auf der Lernseite den Vermerk zu Herkunft und Stand.
 
 **Geprüft:** Automatische Tests und ein Durchlauf im Browser mit einem Platzhalter statt eines KI-Modells. Nicht geprüft: echter Lauf mit Ollama, Lauf auf einem Mac.
 

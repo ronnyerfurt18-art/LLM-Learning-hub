@@ -36,7 +36,7 @@ Im selben Fenster legst du fest, wie die nummerierten Teile des Moduls heißen: 
 
 ## 3. Unterlagen ablegen und einlesen
 
-1. Dateien in den Modulordner legen.
+1. Dateien in den Modulordner legen. Oder in der Homepage unter „Aufbereiten“ hochladen: Modul wählen, Dateien auswählen, auf Wunsch die Einheit wählen. Der Hub legt sie im Modulordner ab, bei gewählter Einheit im Unterordner `Einheit <n>`. Vorhandene Dateien überschreibt er nie; je Datei sind höchstens 300 MB möglich.
 2. Im Hub „Dokumente“ öffnen und synchronisieren. Der Hub prüft den Ordner außerdem alle 30 Sekunden.
 3. Zuordnung prüfen: Jedes Dokument zeigt Modul, Einheit und Art.
 
@@ -54,9 +54,21 @@ Passt nichts, ordnest du die Einheit unter „Dokumente“ von Hand zu.
 
 Es gibt drei Wege. Sie lassen sich mischen.
 
-### Weg A: Modul-Import mit dem lokalen Modell
+### Weg A: Aufbereiten mit dem lokalen KI-Modell
 
-Das lokale Modell liest die PDF-Lehrbriefe und entwirft Lernseiten und Fragen. Der Hub prüft jedes Zitat gegen den Seitentext und setzt die Seitenzahlen selbst.
+Das lokale KI-Modell liest die PDF-Unterlagen und entwirft Lernseiten und Fragen. Der Hub prüft jedes Zitat gegen den Seitentext und setzt die Seitenzahlen selbst.
+
+In der Homepage unter „Aufbereiten“:
+
+1. Modul wählen. Die Seite zeigt je Einheit die Unterlagen und den Stand.
+2. Einheiten ankreuzen und „Vorschau“ wählen. Die Vorschau nennt die Dateien, die Zahl der Abschnitte, die geschätzte Dauer und was ausgelassen wird.
+3. „Aufbereitung starten“. Der Lauf zeigt den Fortschritt und lässt sich abbrechen; fertige Abschnitte bleiben erhalten.
+4. „Lernseiten veröffentlichen“. Sind für das Modul schon Lernseiten veröffentlicht, kommen nur die neuen Einheiten dazu. Die Fragen bestätigst du unter „Dokumente“.
+5. „Big Picture erstellen“. Das KI-Modell schlägt Leitfrage, Bausteine und Beziehungen vor; der Hub ordnet Lernseiten und Quellen zu. Du siehst den Entwurf und veröffentlichst ihn selbst. Kommt später eine Einheit dazu, meldet die Seite das Big Picture als veraltet und bietet „erneuern“ an.
+
+Welche Dateien verwendet werden: je Einheit zuerst Lehrbriefe, sonst Folien, sonst andere PDFs. Als Lehrbrief gilt eine Datei mit dem Namensmuster `<Modulnummer>-<Einheit>-…` oder mit „Skript“, „Kurseinheit“ oder „Studienbrief“ im Namen, als Folien eine mit „Folien“, „Vorlesung“ oder „Slides“. Dateien, deren Name auf Klausur, Lösung, Übung oder Zusammenfassung hindeutet, und alles außer PDF werden nicht aufbereitet.
+
+Dieselben Schritte im Terminal:
 
 ```bash
 .venv/bin/python tools/import_module.py --module 10001 --preview   # zeigt, was gelesen würde

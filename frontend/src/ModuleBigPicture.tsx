@@ -3,6 +3,7 @@ import { Icon } from './components';
 import { SourceLinks } from './SourceLinks';
 import { TutorEntryLink } from './LearningTutor';
 import { LearningPagesPackage } from './types';
+import { unitLabel, unitLabelPlural } from './unitLabel';
 import './module-big-picture.css';
 
 type Box = { x: number; y: number; width: number; height: number };
@@ -110,5 +111,6 @@ export function ModuleBigPicture({ bundle, onOpenLesson, initialConcept = '', se
       <TutorEntryLink key={`${bundle.module_id}-${selected.id}`} bundle={bundle} conceptId={selected.id} />
     </div>
     <p className="big-picture-takeaway"><strong>Der rote Faden</strong>{picture.takeaway}</p>
+    {picture.generated_by && <p className="big-picture-origin">Entwurf: {picture.generated_by}.{picture.units?.length ? ` Stand: ${picture.units.length === 1 ? unitLabel(bundle) : unitLabelPlural(bundle)} ${picture.units.join(', ')}.` : ''} Fachlich nicht geprüft.</p>}
   </section>;
 }

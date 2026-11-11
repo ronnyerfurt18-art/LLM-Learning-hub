@@ -12,7 +12,7 @@ Lokale Lernplattform für Studium und Schule. Die Oberfläche läuft im Browser 
 - Lernchat mit lokalem KI-Modell über die eigenen Unterlagen, auf Wunsch mit Mikrofon und Sprachausgabe
 - Einsendearbeiten als Übung und als Gespräch Frage für Frage
 - Lernplanung mit Terminen, Lernblöcken und Kalenderexport
-- Modul-Import: Das lokale KI-Modell entwirft aus PDF-Lehrbriefen Lernseiten und Fragen
+- Aufbereiten: Unterlagen in der Homepage hochladen; das lokale KI-Modell entwirft daraus je Einheit Lernseiten und Fragen und auf Wunsch ein Big Picture. Veröffentlicht wird erst nach deiner Prüfung
 - Qualitätsprüfung der KI-Antworten
 
 ## Voraussetzungen

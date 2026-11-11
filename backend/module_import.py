@@ -29,7 +29,8 @@ PROMPT_VERSION = 1
 WINDOW_CHARS = 14000
 WINDOW_PAGES = 12
 MIN_PAGE_CHARS = 200
-SOURCE_KINDS = ('course_material', 'lecture')
+# Best available kind per unit wins: course letters, then slides, then PDFs the scan could not classify.
+SOURCE_KINDS = ('course_material', 'lecture', 'other')
 QUESTION_TYPES = ('flashcard', 'single_choice', 'multiple_choice', 'free_text')
 MINUTES_PER_WINDOW = 5
 DRAFTS = 'entwuerfe'
@@ -155,7 +156,7 @@ def plan_sources(hub, module_id, units=None):
             continue
         row = {**row, 'kind': source_kind(row)}
         if row['kind'] not in SOURCE_KINDS:
-            ignored.append({'path': row['path'], 'reason': 'Weder Lehrbrief noch Folien; wird nicht aufbereitet.'})
+            ignored.append({'path': row['path'], 'reason': 'Nach dem Dateinamen keine Lernunterlage (zum Beispiel Klausur, Lösung, Übung oder Zusammenfassung); wird nicht aufbereitet.'})
         elif row.get('status') in ('error', 'missing'):
             ignored.append({'path': row['path'], 'reason': 'Die Datei ist nicht mehr vorhanden.' if row['status'] == 'missing'
                             else 'Die Datei konnte nicht gelesen werden.'})
@@ -168,8 +169,10 @@ def plan_sources(hub, module_id, units=None):
     result = []
     for unit in sorted(by_unit):
         rows = sorted(by_unit[unit], key=lambda row: row['path'])
-        primary = [row for row in rows if row['kind'] == 'course_material'] or rows
-        skipped.extend({'path': row['path'], 'reason': 'Folien nicht verwendet, weil für die Kurseinheit ein Lehrbrief vorliegt.'}
+        best = min(SOURCE_KINDS.index(row['kind']) for row in rows)
+        primary = [row for row in rows if SOURCE_KINDS.index(row['kind']) == best]
+        skipped.extend({'path': row['path'], 'reason': 'Folien nicht verwendet, weil für die Kurseinheit ein Lehrbrief vorliegt.'
+                        if row['kind'] == 'lecture' else 'Nicht verwendet, weil für die Kurseinheit ein Lehrbrief oder Folien vorliegen.'}
                        for row in rows if row not in primary)
         for row in primary:
             document = hub.document(row['id'])
@@ -264,7 +267,7 @@ def _slug(value):
 
 
 def source_title(module, source):
-    label = 'Lehrbrief' if source['kind'] == 'course_material' else 'Folien'
+    label = {'course_material': 'Lehrbrief', 'lecture': 'Folien'}.get(source['kind'], 'Unterlage')
     return f"{module['name']} · Kurseinheit {source['unit']} · {label}"
 
 

@@ -12,7 +12,7 @@ export type AssignmentsPackage={module_id:string;assignments:Assignment[]};
 export type LearningSection={id:string;title:string;paragraphs:string[];bullets?:string[];table?:{headers:string[];rows:string[][]};image?:SourceImage;note?:string;sources:SourceRef[]};
 export type LearningLesson={id:string;unit:number;title:string;summary:string;learning_goals:string[];sections:LearningSection[];exercise_ids:string[]};
 export type BigPictureNode={id:string;title:string;summary:string;role:string;sources:SourceRef[];lesson_ids?:string[];scope_note?:string};
-export type ModuleBigPicture={title:string;central_question:string;intro:string;takeaway:string;nodes:BigPictureNode[];connections:{from:string;to:string;label:string}[]};
+export type ModuleBigPicture={title:string;central_question:string;intro:string;takeaway:string;nodes:BigPictureNode[];connections:{from:string;to:string;label:string}[];units?:number[];generated_by?:string};
 export type LearningPagesSummary={module_id:string;module_number:string;module_title:string;lesson_count:number;has_big_picture?:boolean};
 export type LearningPagesPackage={schema_version:number;module_id:string;unit_label?:string;has_assignments?:boolean;module_number:string;module_title:string;overview:{title:string;paragraphs:string[];sources:SourceRef[];units:{unit:number;title:string;description:string;topics:string[]}[];learning_path:string[];big_picture?:ModuleBigPicture};lessons:LearningLesson[]};
 export type Module={id:string;unit_label?:string;has_assignments?:boolean;name:string;number:string;directory:string;exam_date:string|null;unit_count:number;question_count:number;studied_count:number;mastered_count:number;progress:number;success_rate:number;last_activity:string|null;weak_topics:{topic:string;success_rate:number}[];units:number[];unit_summaries:UnitSummary[]};
@@ -29,3 +29,14 @@ export type Stats={activity:Activity[];progress_history:{date:string;studied:num
 
 export type PracticeResult={question_id:string;answer:Answer;attempt_id?:string|null;question?:Question;correct:boolean;score:number;grading:string;matched_keywords:string[];missing_keywords:string[];answer_note?:string;unanswered?:boolean};
 export type PracticeRound={id:string;module_id:string;question_ids:string[];questions:Question[];answers:Record<string,Answer>;current_index:number;count:number;status:"active"|"completed";results:PracticeResult[];created_at:string;completed_at?:string;mistakes_only?:boolean;score?:number;max_score?:number;percentage?:number};
+
+export type ImportDocument={path:string;name:string;kind:string;pages:number;usable:boolean;reason:string|null};
+export type ImportUnit={unit:number;documents:ImportDocument[];draft_lessons:number;published_lessons:number};
+export type ImportOverview={module_id:string;module_number:string;units:ImportUnit[];unassigned_documents:ImportDocument[];draft:boolean;has_learning_pages:boolean};
+export type ImportPreview={module_id:string;windows:number;estimated_minutes:number;sources:{unit:number;path:string;kind:string;pages:number;windows:number}[];skipped:{path:string;reason:string}[]};
+export type ImportStatus={state:'idle'|'running'|'done'|'cancelled'|'error';module_id?:string;module_name?:string;model?:string;done?:number;total?:number;current?:string;messages:string[];counts?:{rejected_questions:number;unproven_sections:number;failed_windows:number;reused_windows:number};outputs?:{questions:number;lessons:number;question_files:string[];draft?:string;draft_errors?:string[]}};
+export type ImportPublishResult={published:string;lessons:number;added_units:number[];skipped_units:number[]};
+export type UploadResult={path:string;module_id:string;unit:number|null;requested_unit:number|null;size:number};
+export type BigPictureDraft=ModuleBigPicture;
+export type BigPictureInfo={state:'idle'|'running'|'done'|'error';message:string;published:{exists:boolean;generated_by:string|null;units:number[];stale_units:number[]};draft:BigPictureDraft|null};
+export type AppSettings={features:string[];tutor?:{readiness?:string;message?:string}};
