@@ -2,7 +2,7 @@
 
 Dieses Log hält fest, **wie der Hub aufgebaut ist und warum**. Einzelne Änderungen mit Sicherung und Rückweg stehen weiterhin im `Aenderungslog.md`; hierher gehören Aufbau, Grundsätze und Entscheidungen, die länger gelten. Neue Einträge kommen unten unter „Entscheidungen“ dazu; die Übersicht oben wird bei Bedarf fortgeschrieben.
 
-Stand der Übersicht: 10.11.2026.
+Stand der Übersicht: 11.11.2026.
 
 ## 1. Zwei Stränge: fester Hub und lokales Modell
 
@@ -26,6 +26,7 @@ Der Hub arbeitet mit zwei Strängen, die sich gegenseitig einrahmen.
 | Lernwiki | Speichern, Versionieren, Status „ungeprüft/geprüft“ (`lernwiki.py`) | Musterlösung auf ausdrücklichen Wunsch erzeugen |
 | Modul-Import | Quellen wählen, in Abschnitte teilen, Zitate in den Seiten wiederfinden, Formate prüfen, Zwischenspeicher (`module_import.py`) | Lernseiten und Übungsfragen je Abschnitt entwerfen |
 | Qualitätsprüfung | Feste Regeln nach jeder Antwort, Protokoll der Befunde (`quality.py`) | Zweiter Blick auf eine Antwort auf Knopfdruck |
+| Entwicklung | Anforderungen speichern, Dateiindex des Programms bilden, genannte Dateien belegen, Tests ergänzen, Weg einstufen, Übergabe-Prompt schreiben (`development.py`) | Auftrag aus einer Anforderung ausarbeiten: Ziel, Dateien, Schritte, Abnahmekriterien, Risiken, Fragen, Größe |
 | Sprache | Aufnahme begrenzen, Dateien nur vorübergehend halten (`voice.py`) | Eigene lokale Sprachmodelle für Erkennen und Vorlesen (nicht das Tutor-Modell) |
 
 ### Wie die Stränge ineinandergreifen
@@ -51,12 +52,12 @@ Nachricht ──► [A] erkennen ──► [A] Kontext + Regeln ──► [B] An
 
 ### Wo welcher Übergang liegt
 
-| Übergang | Lernchat | KI-Planer | Modul-Import |
-|---|---|---|---|
-| Einrahmen | `build_tutor_context`, `build_assignment_context` | Fakten aus `_snapshot`, `_assignment_facts` | `window_messages` mit Seitenausschnitt und JSON-Schema |
-| Prüfen | `check_tutor`, Quellenmarker in `_finish` | `check_plan` | `locate_quote`, `validate_import`, `validate_learning_page` |
-| Verbuchen | geöffnete Fragen (`tutor:assignments`), Befunde (`quality:log`) | Befunde (`quality:log`) | Importdatei in `imports/`, Entwurf in `imports/entwuerfe/` |
-| Freigabe durch dich | Selbsteinschätzung im Lernprotokoll | Termine selbst eintragen | Import bestätigen, Entwurf veröffentlichen |
+| Übergang | Lernchat | KI-Planer | Modul-Import | Entwicklung |
+|---|---|---|---|---|
+| Einrahmen | `build_tutor_context`, `build_assignment_context` | Fakten aus `_snapshot`, `_assignment_facts` | `window_messages` mit Seitenausschnitt und JSON-Schema | `messages_for` mit Dateiindex, Architekturauszug und JSON-Schema |
+| Prüfen | `check_tutor`, Quellenmarker in `_finish` | `check_plan` | `locate_quote`, `validate_import`, `validate_learning_page` | `build_order`, `decide_route` |
+| Verbuchen | geöffnete Fragen (`tutor:assignments`), Befunde (`quality:log`) | Befunde (`quality:log`) | Importdatei in `imports/`, Entwurf in `imports/entwuerfe/` | Anforderung mit Auftrag (`development:requests`) |
+| Freigabe durch dich | Selbsteinschätzung im Lernprotokoll | Termine selbst eintragen | Import bestätigen, Entwurf veröffentlichen | Einstufung umstellen, Prompt selbst kopieren |
 
 ## 2. Grundsätze
 
@@ -78,13 +79,14 @@ FastAPI-Server (backend/main.py) ── Sperren, Zugriff nur lokal
    ├─ feste Dienste: core, documents, learning_pages, assignments, planning,
    │                 search, practice, learning_memory, quality
    ├─ Modellgrenze:  tutor (ein Dienst für alle Modellaufrufe), local_model, bonsai
-   └─ Mischformen:   planner, tutor_context, tutor_assignments, lernwiki, module_import
+   └─ Mischformen:   planner, tutor_context, tutor_assignments, lernwiki, module_import,
+                     big_picture, development
 SQLite (data/learning.sqlite3)     Inhaltsdateien (content/, imports/)     Studienordner (nur lesend)
 ```
 
 | Ablage | Inhalt | Wer schreibt |
 |---|---|---|
-| `data/learning.sqlite3` | Module, Fragen, Lernversuche, Dokumentenindex, Termine, Lernprotokoll, Lernwiki, Einstellungen (`metadata`) | nur der Hub |
+| `data/learning.sqlite3` | Module, Fragen, Lernversuche, Dokumentenindex, Termine, Lernprotokoll, Lernwiki, Entwicklungsanforderungen, Einstellungen (`metadata`) | nur der Hub |
 | `content/` | geprüfte Lernseiten, Einsendearbeiten, Lernziele | du bzw. beauftragte Aufbereitung; der Modul-Import nur beim ausdrücklichen Veröffentlichen |
 | `imports/` | Frageimporte (warten auf Bestätigung), `entwuerfe/` für Lernseiten | Aufbereitung und Modul-Import |
 | `data/module-import/` | Zwischenspeicher fertiger Modellantworten | Modul-Import |
@@ -133,12 +135,19 @@ SQLite (data/learning.sqlite3)     Inhaltsdateien (content/, imports/)     Studi
 
 ### 11.11.2026 – Bausteine im selben Prozess, abschaltbar
 **Anlass:** Die Frage, ob Funktionen als eigene Dienste laufen sollen.
-**Entscheidung:** Keine getrennten Dienste. Jeder Baustein ist eine Datei, die ihre Routen selbst anmeldet. `features` in `tutor.local.json` bestimmt, welche Bausteine geladen werden (`voice`, `module_import`, `big_picture`); die Oberfläche blendet die übrigen aus.
+**Entscheidung:** Keine getrennten Dienste. Jeder Baustein ist eine Datei, die ihre Routen selbst anmeldet. `features` in `tutor.local.json` bestimmt, welche Bausteine geladen werden (`voice`, `module_import`, `big_picture`, seit dem Abzweig „Entwicklung“ auch `development`); die Oberfläche blendet die übrigen aus.
 **Begründung:** Getrennte Prozesse kosten Startzeit und Arbeitsspeicher, der auf 16 GB knapp ist. Eigene Prozesse bleiben die KI-Modelle (Ollama, Bonsai) und die Sprachverarbeitung.
+
+### 11.11.2026 – Abzweig „Entwicklung“: das Modell entwirft den Auftrag, der Hub schreibt den Prompt
+**Anlass:** Änderungen am Hub sollen im Hub vorbereitet werden, lokal oder mit einem Prompt für eine externe KI.
+**Entscheidung:** Der Baustein `development` ändert keinen Programmcode. Das KI-Modell sieht die Anforderung, die Dateinamen des Programms mit je einer Zeile Beschreibung und die Grundsätze aus diesem Log, aber keinen Quelltext und keine Lerninhalte. Es schlägt Dateien, Schritte und Kriterien vor. Der Hub übernimmt nur Dateien, die er findet, ergänzt zugehörige Tests, entscheidet nach festen Regeln über den Weg und baut den Übergabe-Prompt aus festen Teilen und `docs/entwicklungsregeln.md`. Der Prompt verlässt den Hub nur über die Zwischenablage.
+**Begründung:** Ein lokales KI-Modell mit 27 Milliarden Parametern schärft eine Anforderung brauchbar, ändert Code über mehrere Dateien aber unzuverlässig. Ein fester Prompt bleibt nachvollziehbar und enthält nichts, was der Hub nicht selbst hineingelegt hat.
+**Offen:** Umsetzung kleiner Änderungen durch das lokale KI-Modell auf einem Git-Branch mit Freigabe und Testlauf. Sie setzt voraus, dass der Programmordner ein Git-Repository ist und nicht in einem Cloud-Ordner liegt.
 
 ## 5. Bekannte Lücken
 
-- Aufbereitung und Big Picture sind nur mit einem Platzhalter statt eines echten KI-Modells geprüft.
+- Aufbereitung, Big Picture und die Aufträge im Abzweig „Entwicklung“ sind nur mit einem Platzhalter statt eines echten KI-Modells geprüft.
+- Im Abzweig „Entwicklung“ rät das KI-Modell die betroffenen Dateien aus Namen und Kurzbeschreibungen; der Hub prüft nur, ob es sie gibt, nicht ob sie die richtigen sind.
 - Die Übersicht je Einheit liest bei jedem Aufruf die Seitentexte aller Lehrbriefe; bei großen Modulen ist das langsam.
 - Hochgeladene Videos (`.mp4`) werden gespeichert, erscheinen aber nicht unter „Dokumente“.
 - Die Qualitätsprüfung deckt normale Lernseiten-Gespräche nur mit zwei Regeln ab; für den Planer gibt es keine Modellprüfung.

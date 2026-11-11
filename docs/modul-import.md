@@ -31,7 +31,7 @@ Chat, Import und Big Picture teilen sich das Modell und laufen nie gleichzeitig.
 
 ## Bausteine abschalten
 
-`tutor.local.json` darf `"features": ["voice", "module_import", "big_picture"]` enthalten; nur die genannten Bausteine sind aktiv. Fehlt der Schlüssel, sind alle aktiv. Zu `module_import` gehören auch Übersicht und Upload. Abgeschaltete Bausteine haben keine Routen; `GET /api/settings` nennt die aktiven unter `features`.
+`tutor.local.json` darf `"features": ["voice", "module_import", "big_picture", "development"]` enthalten; nur die genannten Bausteine sind aktiv. Fehlt der Schlüssel, sind alle aktiv. Zu `module_import` gehören auch Übersicht und Upload. Abgeschaltete Bausteine haben keine Routen; `GET /api/settings` nennt die aktiven unter `features`.
 
 ## Wie gearbeitet wird
 

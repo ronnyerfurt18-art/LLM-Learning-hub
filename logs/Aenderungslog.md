@@ -4,6 +4,28 @@ Die Rohfassung ist am 10.11.2026 aus dem privaten Master Learning Hub abgezweigt
 
 ---
 
+## 11.11.2026 – Abzweig „Entwicklung“: Anforderungen, Auftrag durch das KI-Modell, Einstufung, Übergabe-Prompt
+
+**Anlass:** Änderungen am Hub sollen im Hub selbst erfasst und mit dem lokalen KI-Modell vorbereitet werden. Reicht das lokale KI-Modell nicht, soll ein fertiger Prompt für eine externe KI entstehen.
+
+**Server (`backend/development.py`, `backend/main.py`, `backend/local_model.py`):** Neuer Baustein `development` mit `GET /api/development`, `POST /api/development/requests`, `GET/PATCH /api/development/requests/{id}` und `POST /api/development/requests/{id}/order`. Das KI-Modell sieht Anforderung, Dateiindex des Programms und einen Auszug aus dem Architekturlog, aber keinen Quelltext und keine Lerninhalte. Der Hub übernimmt nur belegte Dateien, ergänzt zugehörige Tests, stuft nach festen Regeln als „lokal machbar“ oder „extern übergeben“ ein und baut den Prompt selbst. Anforderungen liegen in der Datenbank unter `development:requests`.
+
+**Regeln (`docs/entwicklungsregeln.md`):** Neue Datei; ihr Inhalt geht in jeden Prompt. Ohne die Datei gelten fünf eingebaute Standardregeln.
+
+**Oberfläche (`frontend/src/Development.tsx`, `development.css`, `App.tsx`, `components.tsx`, `types.ts`):** Neue Seite „Entwicklung“ mit Anforderung erfassen, Liste mit Status, Auftrag, Einstufung und Prompt zum Kopieren. Der Menüpunkt erscheint nur bei aktivem Baustein. Neues Symbol `code`.
+
+**Abschaltliste:** `features` kennt jetzt `development`. Wer in `tutor.local.json` eine eigene Liste führt, muss `development` ergänzen, sonst bleibt die Seite ausgeblendet.
+
+**Nicht enthalten:** Das lokale KI-Modell ändert keinen Code; „lokal machbar“ ist nur eine Einstufung. Keine Spracheingabe auf der Seite. Keine Ausarbeitung mit Bonsai.
+
+**Tests:** Neu `tests/test_development.py`. `tests/test_features.py` an den vierten Baustein angepasst.
+
+**Geprüft:** Automatische Tests und ein Durchlauf im Browser mit einem Platzhalter für Ollama, in normaler Breite und auf 390 Pixel. Nicht geprüft: Lauf mit einem echten KI-Modell, Lauf auf einem Mac.
+
+**Rückgängig machen:** `backend/development.py`, `frontend/src/Development.tsx`, `frontend/src/development.css`, `docs/entwicklung.md`, `docs/entwicklungsregeln.md` und `tests/test_development.py` löschen; die Anmeldung in `backend/main.py`, `development` in `FEATURES` (`backend/local_model.py`), Menüpunkt und Seite in `App.tsx` sowie die Typen in `types.ts` entfernen; `tests/test_features.py` zurücksetzen. Gespeicherte Anforderungen bleiben in der Datenbank und stören nicht.
+
+---
+
 ## 11.11.2026 – Aufbereiten in der Homepage: Upload, Start pro Einheit, Veröffentlichen, Big Picture
 
 **Veröffentlichen pro Einheit (`backend/module_import.py`, `backend/content_files.py`):** Gibt es für ein Modul schon Lernseiten, übernimmt das Veröffentlichen nur Einheiten, die dort fehlen, und ergänzt Modulüberblick und Lernpfad. Vorher wird geprüft und gesichert (`data/backups/`).

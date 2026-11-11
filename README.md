@@ -14,6 +14,7 @@ Lokale Lernplattform für Studium und Schule. Die Oberfläche läuft im Browser 
 - Lernplanung mit Terminen, Lernblöcken und Kalenderexport
 - Aufbereiten: Unterlagen in der Homepage hochladen; das lokale KI-Modell entwirft daraus je Einheit Lernseiten und Fragen und auf Wunsch ein Big Picture. Veröffentlicht wird erst nach deiner Prüfung
 - Qualitätsprüfung der KI-Antworten
+- Entwicklung: Anforderungen an den Hub festhalten; das lokale KI-Modell arbeitet einen Auftrag aus, der Hub stuft ihn ein und schreibt den Prompt für eine externe KI
 
 ## Voraussetzungen
 
@@ -56,7 +57,7 @@ Es sollte immer nur ein großes KI-Modell geladen sein. Arbeitsspeicher lässt s
 | `study_folder` | Ordner mit den Lernunterlagen. Standard: `~/LearningHub/Studium`. Der Hub liest ihn vollständig ein; er darf nicht im Programmordner liegen. |
 | `bonsai_runtime` | Ordner der Bonsai-Laufzeit. Standard: `~/.learning-hub/runtimes/bonsai-demo` |
 | `voice_runtime` | Ordner der Sprach-Laufzeit. Standard: `~/.learning-hub/runtimes/voice` |
-| `features` | Liste der aktiven Bausteine: `voice`, `module_import`, `big_picture`. Ohne den Schlüssel sind alle aktiv. |
+| `features` | Liste der aktiven Bausteine: `voice`, `module_import`, `big_picture`, `development`. Ohne den Schlüssel sind alle aktiv. |
 
 Umgebungsvariablen: `MLH_PORT`, `MLH_DATA_DIR`, `MLH_SOURCE_ROOT`, `MLH_LOCAL_CONTEXT_CHARS`, `MLH_CONTEXT_TOKENS`, `MLH_BONSAI_RUNTIME`, `MLH_VOICE_RUNTIME`.
 
@@ -120,6 +121,7 @@ bash Tests.command
 | `docs/inhalte-einbinden.md` | Eigene Lerninhalte einbinden |
 | `docs/import-format.md` | Format der Fragenpakete |
 | `docs/modul-import.md` | Modul-Import mit dem lokalen KI-Modell |
+| `docs/entwicklung.md`, `docs/entwicklungsregeln.md` | Seite „Entwicklung“ und die Regeln, die in jeden Übergabe-Prompt gehen |
 | `docs/api-contract.md` | Schnittstellen und Format der Lernseiten |
 | `docs/architecture.md`, `logs/Architekturlog.md` | Aufbau und Entscheidungen |
 | `docs/bonsai.md`, `setup/README.md` | Bonsai und Sprach-Laufzeit |
