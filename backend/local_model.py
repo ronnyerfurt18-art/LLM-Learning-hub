@@ -39,7 +39,7 @@ def study_folder(project=None):
     return Path(configured or Path.home() / 'LearningHub' / 'Studium').expanduser()
 
 
-FEATURES = ('voice', 'module_import', 'big_picture')
+FEATURES = ('voice', 'module_import', 'big_picture', 'development')
 
 
 def check_features(items, where='features'):

@@ -27,6 +27,7 @@ from .documents import generate_proposals, scan_documents
 from .planning import register_planning_routes
 from .planner import register_planner_routes
 from .big_picture import register_big_picture_routes
+from .development import register_development_routes
 from .module_import import register_module_import_routes
 from .upload import register_upload_routes
 from .quality import register_quality_routes
@@ -599,6 +600,8 @@ def create_app(source_root=None, data_dir=None, project_root=None, start_watch=T
         register_upload_routes(app, hub, project, source)
     if 'big_picture' in features:
         register_big_picture_routes(app, hub, project, source, data)
+    if 'development' in features:
+        register_development_routes(app, hub, project)
     register_quality_routes(app, hub)
     if 'voice' in features:
         register_voice_routes(app)

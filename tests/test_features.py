@@ -34,7 +34,7 @@ def test_launcher_accepts_known_features_and_hands_them_on(tmp_path):
         assert os.environ['MLH_FEATURES'] == ''
         _config(tmp_path, features=list(FEATURES))
         launcher.configure()
-        assert os.environ['MLH_FEATURES'] == 'voice,module_import,big_picture'
+        assert os.environ['MLH_FEATURES'] == 'voice,module_import,big_picture,development'
 
 
 @pytest.mark.parametrize('bad', [['voice', 'chat'], ['Voice'], 'voice', [1], None, {'voice': True}, ['voice', None]])
@@ -85,17 +85,24 @@ def _probe(client):
         'big_picture': (client.get('/api/big-picture', params={'module_id': 'M-0'}).json() != NOT_FOUND,
                         client.post('/api/big-picture', json={}).json() != NOT_FOUND,
                         client.post('/api/big-picture/publish', json={}).json() != NOT_FOUND),
-        'voice': (client.get('/api/tutor/voice/status').json() != NOT_FOUND,)}
+        'voice': (client.get('/api/tutor/voice/status').json() != NOT_FOUND,),
+        'development': (client.get('/api/development').json() != NOT_FOUND,
+                        client.post('/api/development/requests', json={}).json() != NOT_FOUND,
+                        client.get('/api/development/requests/E-0').json() != NOT_FOUND,
+                        client.patch('/api/development/requests/E-0', json={}).json() != NOT_FOUND,
+                        client.post('/api/development/requests/E-0/order').json() != NOT_FOUND)}
 
 
 def test_every_feature_is_on_when_nothing_is_configured(tmp_path, monkeypatch):
     app, client = _app(tmp_path, monkeypatch, None)
     with client:
-        assert {name: all(flags) for name, flags in _probe(client).items()} == {'module_import': True, 'big_picture': True, 'voice': True}
-        assert client.get('/api/settings').json()['features'] == ['voice', 'module_import', 'big_picture']
+        assert {name: all(flags) for name, flags in _probe(client).items()} == {'module_import': True, 'big_picture': True, 'voice': True,
+                                                                                'development': True}
+        assert client.get('/api/settings').json()['features'] == ['voice', 'module_import', 'big_picture', 'development']
 
 
-@pytest.mark.parametrize('on', [[], ['voice'], ['module_import'], ['big_picture'], ['voice', 'big_picture'], ['module_import', 'big_picture']])
+@pytest.mark.parametrize('on', [[], ['voice'], ['module_import'], ['big_picture'], ['development'], ['voice', 'big_picture'],
+                                ['module_import', 'big_picture'], ['voice', 'module_import', 'big_picture']])
 def test_a_disabled_feature_has_no_routes_and_the_rest_keeps_running(tmp_path, monkeypatch, on):
     app, client = _app(tmp_path, monkeypatch, ','.join(on))
     with client:
