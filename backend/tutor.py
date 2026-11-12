@@ -21,6 +21,7 @@ from .tutor_assignments import build_assignment_context, remember_question, sele
 from .quality import annotate, check_tutor, record, remember_turn
 from .bonsai import BonsaiModel, StreamAdapter, MODEL as BONSAI_MODEL, MODEL_PATH as BONSAI_PATH, BASE as BONSAI_BASE, model_list as bonsai_model_list
 from .local_model import LocalModel, CONTEXT_TOKENS, KEEP_ALIVE, local_model_info
+from . import pdf_figures
 
 
 OPENAI_ENDPOINT = 'https://api.openai.com/v1/responses'
@@ -38,6 +39,8 @@ MAX_THINKING_CHARS = 60000
 MAX_STREAM_BYTES = 8 * 1024 * 1024
 # Upper bound (UTF-8 bytes) for learning context sent to the local model.
 MAX_LOCAL_CONTEXT_BYTES = 24_000
+# Conservative token cost of one attached figure (about 1 000-2 800 image tokens at 150 dpi).
+IMAGE_TOKEN_RESERVE = 3_000
 REQUEST_TIMEOUT = 180
 _END_MARKER = '\nENDE DER UNVERTRAUTEN LERNDATEN.'
 # Streaming waits per read; the first chunk arrives only after the prompt is read.
@@ -51,16 +54,22 @@ TUTOR_INSTRUCTIONS = """Du bist ein deutschsprachiger, geduldiger Lerntutor für
 Sprich die lernende Person mit „du“ an. Verwendest du ein Fallbeispiel, bleibt sie sie
 selbst: Sprich sie nie mit Namen oder Funktionen aus dem Beispiel an.
 Hilf beim Verstehen und beim eigenständigen Anwenden: Kläre zunächst den Denkstand,
-gib kleine Hinweise oder ein passendes Beispiel und stelle am Ende genau eine Frage.
-Schreibe deine Frage oder den Arbeitsauftrag an die lernende Person in einer eigenen Zeile
+gib kleine Hinweise oder ein passendes Beispiel. Bei Übungen stelle am Ende genau eine Frage.
+Wenn du eine Rückfrage stellst, schreibe die Frage oder den Arbeitsauftrag an die lernende Person in einer eigenen Zeile
 im Format „### Deine Aufgabe: <konkrete Frage oder Aufgabe>“.
 Liefere bei einer Übungsaufgabe nicht sofort die vollständige Lösung. Prüfe einen
 Lösungsversuch ehrlich in dieser Reihenfolge: was zutrifft, was ungenau oder falsch ist,
 was fehlt – jeweils kurz begründet. Lobe nur mit konkreter Begründung. Schreibe der
 lernenden Person nichts zu, was sie nicht selbst geschrieben hat. Gib zu Fehlendem
 zuerst einen Hinweis statt der fertigen Antwort. Bei einer Verständnisfrage darfst du
-eine kurze, direkte Erklärung geben, bevor du die Rückfrage stellst.
-Bleib bei deinen früheren Aussagen im Gespräch; korrigierst du eine, sag das ausdrücklich.
+eine kurze, direkte Erklärung geben. Direkte Wissensfragen beantwortest du vollständig aus den Belegen.
+Prüfe frühere Aussagen gegen die jetzt beigefügten Belege. Korrigiere frühere Fehler ausdrücklich.
+Der Hub kann für jede Nachricht andere Originalauszüge beifügen. Prüfe den aktuellen Kontext,
+bevor du behauptest, eine Seite oder Abbildung fehle. Eine Quellen-ID gilt nur für den aktuellen Kontext.
+Bei einem Auftrag wie „Suche oder lade Seite/Abbildung“ werte die vom Hub bereits
+beigefügten Originalauszüge aus und nenne Fundstelle und Inhalt. Wenn die Belege
+vorliegen, beantworte die Sachfrage direkt. Fordere dann kein erneutes Kopieren
+oder eigenständiges Aufzählen durch die lernende Person.
 Lege offensichtliche Tipp-, Zähl- oder Versprecher wohlwollend aus und korrigiere sie nicht eigens.
 Bring eine Korrektur nur einmal an und erkläre direkt, wie es richtig ist. Stelle keine
 Rückfrage, deren Antwort bereits in deiner eigenen Antwort steht.
@@ -75,7 +84,7 @@ der Kontext etwas anderes sagt. Widersprich nicht aus eigenen Schlussfolgerungen
 Kontext eine Aussage weder ab noch widerlegt er sie, bewerte sie nicht als falsch. Sag dann,
 dass die beigefügten Texte das nicht belegen, erkenne plausible Teile an und frage nach oder
 verweise auf die passende Stelle. Sucht sie einen Fachbegriff oder eine Aufzählung aus dem
-Lehrbrief, gib einen Hinweis auf die Stelle im Kontext, statt eigene Begriffe zu ergänzen.
+Lehrbrief, nenne die belegten Begriffe vollständig mit Quellen-ID. Fehlt der Beleg, benenne die Lücke.
 Belege: Setze eine Quellen-ID wie [S1] oder [S2] nur hinter eine Aussage, die im Text genau
 dieser Quelle steht; belege so jede fachliche Aussage aus dem Studienkontext. Verwende
 ausschließlich Quellen-IDs, die im Studienkontext tatsächlich vorkommen. Erfinde keine Quellen, Zitate, Dateipfade,
@@ -257,7 +266,9 @@ class TutorService:
         if self.provider in {'ollama', 'bonsai'}:
             # UTF-8 bytes are a conservative upper bound for byte-BPE tokens;
             # leave space for message templates and the requested response.
-            budget = CONTEXT_TOKENS - predict - 1024
+            images = (context.get('images') or []) if (thinking and self.provider == 'ollama'
+                                                        and getattr(self.local, 'vision', False)) else []
+            budget = CONTEXT_TOKENS - predict - 1024 - IMAGE_TOKEN_RESERVE * len(images)
             remaining = budget - len((instructions + CONTEXT_PREAMBLE + message).encode('utf-8'))
             if remaining < 1200:
                 raise HTTPException(400, 'Bitte kürze deine Frage, damit noch Platz für den Lernkontext bleibt.')
@@ -285,7 +296,12 @@ class TutorService:
             history = kept
         turns = [{'role': 'user', 'content': CONTEXT_PREAMBLE + context_text}]
         turns.extend(history)
-        turns.append({'role': 'user', 'content': message})
+        final = {'role': 'user', 'content': message}
+        if self.provider == 'ollama' and thinking and getattr(self.local, 'vision', False) and context.get('images'):
+            # Rendered offline from the cited PDF pages; only with "Länger nachdenken".
+            final['content'] = message + pdf_figures.figure_note(context['images'])
+            final['images'] = [item['image'] for item in context['images']]
+        turns.append(final)
         if self.provider == 'openai':
             payload = {'model': self.model, 'instructions': instructions,
                        'input': turns, 'store': False, 'max_output_tokens': MAX_OUTPUT_TOKENS}
@@ -379,7 +395,12 @@ class TutorService:
         source_ids = {source['id'] for source in context['sources']}
         if set(re.findall(r'\[(S\d+)\]', answer)) - source_ids:
             warning += ' Die Antwort enthält nicht zuordenbare Quellenmarker; bitte Originalquellen prüfen.'
+        encoded = context.get('context_text', '').encode('utf-16-le')
+        excerpts = {key: [{'pdf_page': span['pdf_page'],
+                           'text': encoded[2 * span['start']:2 * span['end']].decode('utf-16-le')}
+                          for span in spans] for key, spans in context.get('excerpts', {}).items()}
         return {'answer': answer, 'sources': context['sources'], 'provider': self.provider,
+                'excerpts': excerpts, 'figures': context.get('figures', []),
                 'model': self.model, 'notice': (notice + ' ' + warning).strip()}
 
     def stream_chat(self, context, message, history, think=False, instructions=None, limits=None, finish=None):
@@ -533,6 +554,8 @@ def register_tutor_routes(app, hub, project_root, source_root):
 
     fallback_lock = threading.Lock()
     app.state.quality_turns = {}
+    from pathlib import Path as _Path
+    figure_cache = _Path(os.environ.get('MLH_DATA_DIR') or _Path(project_root) / 'data') / 'figure-cache'
 
     def selected(value):
         try:
@@ -558,8 +581,11 @@ def register_tutor_routes(app, hub, project_root, source_root):
                 if picked:
                     result = build_assignment_context(picked, selection['module_id'], project_root, source_root,
                                                       selection.get('max_chars'))
+            deep = value.get('think') is True
             if result is None:
-                result = build_tutor_context(hub, project_root, source_root, **selection)
+                result = build_tutor_context(hub, project_root, source_root,
+                                             message=value.get('message', ''),
+                                             history=value.get('history') or [], deep=deep, **selection)
                 if not goal and hasattr(app.state, 'learning_memory'):
                     result['context_text'] += _goal_note(app.state.learning_memory.overview(selection['module_id']))
             if goal:
@@ -577,6 +603,13 @@ def register_tutor_routes(app, hub, project_root, source_root):
                 for spans in result.get('excerpts', {}).values():
                     for span in spans:
                         span['start'] += offset; span['end'] += offset
+            pages = result.pop('figure_pages', None) or []
+            service = app.state.tutor
+            if deep and pages and service.provider == 'ollama' and getattr(service.local, 'vision', False):
+                try:
+                    result['images'] = pdf_figures.figure_images(pages, value.get('message') or '', figure_cache)
+                except Exception:
+                    result['images'] = []  # A figure must never cost the learner the answer.
         except KeyError as exc:
             raise HTTPException(404, str(exc).strip("'"))
         except ValueError as exc:

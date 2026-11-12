@@ -5,7 +5,8 @@ excerpt of the architecture log; it never sees source code or study content. It 
 keeps only files it can find, adds the tests that belong to them, decides by fixed rules whether the change is small
 enough for the local model, and writes the handover prompt for an external agent itself.
 Nothing in the project is changed here and nothing leaves the computer: requests live in the database, and the prompt
-goes elsewhere only when the person copies it.
+goes elsewhere only when the person copies it. Changing program files for a 'local' order is a separate step with its
+own approval; it lives in development_change.py and shares this module's single background job.
 """
 import json
 import re
@@ -36,6 +37,12 @@ GATE_WAIT_SECONDS = 1800
 GATE_POLL_SECONDS = 2
 RULES_FILE = 'docs/entwicklungsregeln.md'
 ARCHITECTURE_FILE = 'logs/Architekturlog.md'
+DRAFTING = 'Das KI-Modell arbeitet den Auftrag aus. Das kann einige Minuten dauern.'
+HISTORY_MAX = 100
+BUILD_NOTE = 'Oberfläche neu bauen: im Ordner „frontend“ den Befehl „npm run build“ ausführen, danach die Seite im Browser neu laden.'
+RESTART_NOTE = 'Hub beenden und mit „Start.command“ neu starten; geänderter Servercode wirkt erst danach.'
+STATUS_WORDS = {'new': 'Neu', 'drafted': 'Auftrag liegt vor', 'handed_over': 'Übergeben', 'done': 'Umgesetzt', 'dropped': 'Verworfen'}
+ROUTE_WORDS = {'local': 'lokal machbar', 'external': 'extern zu übergeben'}
 MODEL_NEEDED = ('Den Auftrag formuliert das lokale Ollama-Modell des Lernchats; es ist gerade nicht eingerichtet. '
                 'Den Übergabe-Prompt kannst du auch ohne Auftrag verwenden.')
 
@@ -308,14 +315,14 @@ def new_request(value, existing):
     # An automatic title is replaced by the order's title later; one the person wrote is kept.
     return {'id': f'E-{number:03d}', 'title': title, 'title_auto': not _clean(value.get('title'), TITLE_CHARS), 'text': text,
             'note': _clean(value.get('note'), NOTE_CHARS), 'status': 'new', 'created_at': now, 'updated_at': now,
-            'order': None, 'error': ''}
+            'order': None, 'error': '', 'history': [{'at': now, 'text': 'Anforderung angelegt'}]}
 
 
 def apply_patch(request, value):
     """Title, note, status and route may change; the requirement itself stays as it was written."""
     if not isinstance(value, dict) or not value or set(value) - {'title', 'note', 'status', 'route'}:
         raise ValueError('Änderbar sind title, note, status und route.')
-    changed = dict(request)
+    changed, events = dict(request), []
     if 'title' in value:
         title = _clean(value['title'], TITLE_CHARS + 1)
         if not title or len(title) > TITLE_CHARS:
@@ -325,18 +332,127 @@ def apply_patch(request, value):
         if not isinstance(value['note'], str) or len(value['note']) > NOTE_CHARS:
             raise ValueError(f'Die Ergänzung darf höchstens {NOTE_CHARS} Zeichen lang sein.')
         changed['note'] = _clean(value['note'], NOTE_CHARS)
+        if changed['note'] != request.get('note', ''):
+            events.append('Ergänzung geändert')
     if 'status' in value:
         if value['status'] not in STATES:
             raise ValueError('Unbekannter Status. Erlaubt: ' + ', '.join(STATES) + '.')
         changed['status'] = value['status']
+        if value['status'] != request['status']:
+            events.append(f"Status geändert: {STATUS_WORDS[request['status']]} → {STATUS_WORDS[value['status']]}")
     if 'route' in value:
         if value['route'] not in ROUTES:
             raise ValueError('route muss local oder external sein.')
         if not request.get('order'):
             raise ValueError('Der Weg lässt sich erst festlegen, wenn ein Auftrag vorliegt.')
         changed['order'] = {**request['order'], 'route': value['route'], 'route_by': 'user'}
+        if value['route'] != request['order']['route']:
+            events.append(f"Einstufung von dir geändert auf „{ROUTE_WORDS[value['route']]}“")
+    if events:
+        changed.update(logged(request, *events))
     changed['updated_at'] = _now()
     return changed
+
+
+def legacy_history(request):
+    """Events of a request from before the history was kept, as far as the stored timestamps tell."""
+    order, proposal = request.get('order') or {}, request.get('proposal') or {}
+    events = [{'at': request['created_at'], 'text': 'Anforderung angelegt'}]
+    if order.get('created_at'):
+        events.append({'at': order['created_at'], 'text': f"Auftrag ausgearbeitet ({order.get('generated_by', 'KI-Modell')}), "
+                                                        f"eingestuft als {ROUTE_WORDS.get(order.get('route'), 'unbekannt')}"})
+    for key, text in (('created_at', 'Änderung vorgeschlagen'), ('applied_at', 'Änderung übernommen'), ('reverted_at', 'Änderung zurückgenommen')):
+        if proposal.get(key):
+            events.append({'at': proposal[key], 'text': text})
+    return sorted(events, key=lambda event: event['at'])
+
+
+def logged(request, *texts):
+    """{'history': ...} with `texts` added as events now; a request from before the history gets its known events first."""
+    history = list(request.get('history') or legacy_history(request))
+    history += [{'at': _now(), 'text': _clean(text, 300)} for text in texts]
+    return {'history': history[-HISTORY_MAX:]}
+
+
+def timeline(request):
+    return list(request.get('history') or legacy_history(request))
+
+
+def _when(value):
+    try:
+        moment = datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
+
+
+def _modified(path):
+    try:
+        return datetime.fromtimestamp(path.stat().st_mtime, timezone.utc)
+    except OSError:
+        return None
+
+
+def effect_checks(request, project, started):
+    """[{ok, text, hint}] for a change that was applied or taken back: was the interface rebuilt, was the hub restarted since?
+
+    Only file times and the hub's start time are compared; whether the browser already shows the change is not looked at.
+    """
+    proposal = request.get('proposal') or {}
+    applied, reverted = _when(proposal.get('applied_at')), _when(proposal.get('reverted_at'))
+    if proposal.get('state') not in ('applied', 'reverted') or applied is None:
+        return []
+    taken_back = proposal['state'] == 'reverted'
+    paths = [item['path'] for item in proposal.get('applied_files') or []]
+
+    def inside(moment):  # was the change part of what was built or started at `moment`?
+        return moment is not None and moment > applied and (not taken_back or (reverted is not None and moment <= reverted))
+    steps = []
+    if any(path.startswith('frontend/') for path in paths):
+        steps.append(('Oberfläche', 'neu gebaut', _modified(Path(project) / 'frontend' / 'dist' / 'index.html'), BUILD_NOTE))
+    if any(path.startswith('backend/') for path in paths):
+        steps.append(('Hub', 'neu gestartet', _when(started), RESTART_NOTE))
+    checks = []
+    for name, verb, moment, note in steps:
+        if not taken_back:
+            ok = inside(moment)
+            checks.append({'ok': ok, 'text': f'{name} seit dem Übernehmen {verb}.' if ok else f'{name} noch nicht {verb}.',
+                           'hint': '' if ok else note})
+        elif inside(moment):
+            checks.append({'ok': False, 'text': f'{name} stammt noch aus der Zeit mit der Änderung.', 'hint': note})
+    return checks
+
+
+def outcome(request, project, started):
+    """Where a request stands in plain words: label, tone and the checks behind it."""
+    proposal = request.get('proposal') or {}
+    state, status, checks = proposal.get('state'), request['status'], effect_checks(request, project, started)
+    steps = [step for step in (proposal.get('verify') or {}).get('steps', []) if state == 'applied']
+    broken = any(step['ok'] is False for step in steps)
+    # What the hub ran itself: failures and skipped steps are listed; a passed build is already covered by the file times.
+    checks = [{'ok': step['ok'] is not False, 'text': f"{step['name']} {'fehlgeschlagen' if step['ok'] is False else 'nicht geprüft'}.",
+               'hint': step['detail']} for step in steps if step['ok'] is not True and step['name'] != 'Prüfung'] + checks
+    waiting = any(not item['ok'] for item in checks)
+    if state == 'applied':
+        label, tone = ('Übernommen, aber die Prüfung ist fehlgeschlagen', 'red') if broken else (
+            ('Übernommen, wirkt aber noch nicht', 'yellow') if waiting else (
+                ('Übernommen und wirksam', 'green') if checks else ('Übernommen', 'green')))
+    elif state == 'reverted':
+        label, tone = ('Zurückgenommen, wirkt aber noch nicht', 'yellow') if waiting else ('Zurückgenommen', 'neutral')
+    elif state == 'open':
+        label, tone = ('Rückfrage des KI-Modells wartet auf dich' if proposal.get('question') and not proposal.get('edits')
+                       else 'Vorschlag wartet auf deine Freigabe'), 'yellow'
+    elif status == 'done':
+        label, tone = 'Von dir als umgesetzt markiert, vom Hub nicht geprüft', 'neutral'
+    elif status == 'dropped':
+        label, tone = 'Verworfen', 'red'
+    elif status == 'handed_over':
+        label, tone = 'An eine externe KI übergeben, Ergebnis nicht geprüft', 'yellow'
+    elif request.get('order'):
+        label, tone = 'Auftrag liegt vor, noch nichts geändert', 'teal'
+    else:
+        label, tone = 'Noch kein Auftrag', 'neutral'
+    return {'label': label, 'tone': tone, 'checks': checks}
 
 
 def summary(request):
@@ -353,6 +469,7 @@ class Development:
         self._store = lock or threading.RLock()
         self._lock, self._thread = threading.Lock(), None
         self._state = {'state': 'idle', 'message': ''}
+        self.started = _now()  # when this hub process came up; a change to server code shows only after a later start
 
     def requests(self):
         value = self.hub.get_meta(META_KEY)
@@ -390,18 +507,20 @@ class Development:
         with self._lock:
             self._state.update(values)
 
-    def start(self, request_id, model, generate, gate=None):
+    def start(self, request_id, model, generate, gate=None, run=None, kind='order', message=DRAFTING):
+        """One background job at a time: drafting an order here, or proposing a change (`run` from development_change)."""
         self.get(request_id)
         with self._lock:
             if self._thread and self._thread.is_alive():
-                raise HTTPException(409, 'Es wird bereits ein Auftrag ausgearbeitet. Bitte warte, bis er fertig ist.')
-            self._state = {'state': 'running', 'request_id': request_id, 'model': model, 'started_at': _now(),
-                           'message': 'Das KI-Modell arbeitet den Auftrag aus. Das kann einige Minuten dauern.'}
-            self._thread = threading.Thread(target=self.run, args=(request_id, model, generate, gate),
-                                            name='development-order', daemon=True)
+                raise HTTPException(409, 'Es wird bereits ein Auftrag ausgearbeitet. Bitte warte, bis er fertig ist.' if self._state.get('kind') != 'proposal'
+                                    else 'Das KI-Modell schlägt gerade eine Änderung vor. Bitte warte, bis es fertig ist.')
+            self._state = {'state': 'running', 'kind': kind, 'request_id': request_id, 'model': model, 'started_at': _now(),
+                           'message': message}
+            self._thread = threading.Thread(target=run or self.run, args=(request_id, model, generate, gate),
+                                            name=f'development-{kind}', daemon=True)
             self._thread.start()
 
-    def _generate(self, generate, gate, messages):
+    def _generate(self, generate, gate, messages, working=DRAFTING):
         """Wait until the model is free (chat, import and big picture share it), then ask once."""
         waited = 0.0
         while gate is not None and not gate.acquire(timeout=GATE_POLL_SECONDS):
@@ -410,7 +529,7 @@ class Development:
                 raise ValueError('Das KI-Modell war zu lange belegt (Lernchat oder Aufbereitung). Bitte später erneut starten.')
             self._update(message='Wartet darauf, dass das KI-Modell frei wird …')
         try:
-            self._update(message='Das KI-Modell arbeitet den Auftrag aus. Das kann einige Minuten dauern.')
+            self._update(message=working)
             try:
                 return generate(messages, True)
             except (ValueError, KeyError, TypeError):
@@ -432,10 +551,13 @@ class Development:
                 reason = str(exc).strip("'")
                 raise ValueError(f'Keine verwertbare Antwort des KI-Modells: {reason}')
             order = build_order(raw, index, model)
-            self.change(request_id, lambda stored: {**stored, 'order': order, 'error': '', 'updated_at': _now(),
+            # A proposal that waits for approval belonged to the order it was made for; an applied one stays on record.
+            stale = lambda stored: {'proposal': None} if (stored.get('proposal') or {}).get('state') == 'open' else {}
+            way = 'lokal machbar' if order['route'] == 'local' else 'für die Übergabe an eine externe KI'
+            drafted = f"Auftrag ausgearbeitet ({order['generated_by']}), eingestuft als {ROUTE_WORDS[order['route']]}"
+            self.change(request_id, lambda stored: {**stored, **stale(stored), **logged(stored, drafted), 'order': order, 'error': '', 'updated_at': _now(),
                                                     'title': order['title'] if stored.get('title_auto') else stored['title'],
                                                     'status': 'drafted' if stored['status'] == 'new' else stored['status']})
-            way = 'lokal machbar' if order['route'] == 'local' else 'für die Übergabe an eine externe KI'
             self._update(state='done', finished_at=_now(),
                          message=f"Auftrag ausgearbeitet: {len(order['files'])} Dateien, {len(order['steps'])} Schritte, eingestuft als {way}.")
         except Exception as exc:
@@ -447,9 +569,13 @@ class Development:
             self._update(state='error', finished_at=_now(), message=message)
         return self.status()
 
+    def summary(self, request):
+        return {**summary(request), 'outcome': outcome(request, self.project, self.started)}
+
     def detail(self, request_id):
         request = self.get(request_id)
-        return {**request, 'prompt': handover_prompt(request, self.project)}
+        return {**{key: value for key, value in request.items() if key != 'history'}, 'prompt': handover_prompt(request, self.project),
+                'outcome': outcome(request, self.project, self.started), 'timeline': timeline(request)}
 
 
 def register_development_routes(app, hub, project_root):
@@ -461,7 +587,7 @@ def register_development_routes(app, hub, project_root):
 
     @app.get('/api/development')
     def development_overview():
-        return {'requests': [summary(item) for item in reversed(job.requests())], 'job': job.status(),
+        return {'requests': [job.summary(item) for item in reversed(job.requests())], 'job': job.status(),
                 'model_available': available(), 'model_message': '' if available() else MODEL_NEEDED,
                 'rules_source': project_rules(job.project)[1]}
 

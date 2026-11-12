@@ -59,3 +59,8 @@
 }
 .import-step .button{white-space:normal}
 .import-step .button-row>.muted{font-size:12px}
+
+.import-kind { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: .3rem 0 .1rem .5rem; }
+.import-kind select { font-size: .9rem; padding: .15rem .4rem; max-width: 100%; }
+.import-ok { display: block; color: var(--green); font-size: .9rem; }
+.import-remove { display: inline-block; margin-left: .5rem; font-size: .85rem; color: var(--red); }

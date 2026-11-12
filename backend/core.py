@@ -341,9 +341,9 @@ class Hub:
 
     def _unit_label(self, value):
         label = value.get('unit_label') or UNIT_LABELS[0]
-        if label not in UNIT_LABELS:
-            raise ValueError('Bezeichnung der Lerneinheiten muss eine von ' + ', '.join(UNIT_LABELS) + ' sein.')
-        return label
+        if not isinstance(label, str):
+            raise ValueError('Bezeichnung der Lerneinheiten muss Text sein.')
+        return label.strip() or UNIT_LABELS[0]
 
     def _store_unit_label(self, mid, label):
         labels = self.get_meta(UNIT_LABEL_KEY) or {}
@@ -375,7 +375,7 @@ class Hub:
                 match = db.execute('SELECT id FROM modules WHERE name=?', (name,)).fetchone()
             if match:
                 return self.module(match[0])
-            mid = 'M-' + (number or uuid.uuid4().hex[:10])
+            mid = 'M-' + (number if re.fullmatch(r'\d{5}', number) else uuid.uuid4().hex[:10])
             db.execute('INSERT INTO modules VALUES(?,?,?,?,?,?)', (mid, name, number, directory, exam_date, units))
         self._store_unit_label(mid, label)
         return self.module(mid)
@@ -391,7 +391,7 @@ class Hub:
             datetime.strptime(merged['exam_date'], '%Y-%m-%d')
         label = self._unit_label(merged)
         with self.db() as db:
-            db.execute('UPDATE modules SET name=?,number=?,directory=?,exam_date=?,unit_count=? WHERE id=?', (merged['name'], str(merged.get('number') or ''), merged.get('directory') or '', merged.get('exam_date') or None, merged['unit_count'], mid))
+            db.execute('UPDATE modules SET name=?,number=?,directory=?,exam_date=?,unit_count=? WHERE id=?', (merged['name'], str(merged.get('number') or '').strip(), merged.get('directory') or '', merged.get('exam_date') or None, merged['unit_count'], mid))
         self._store_unit_label(mid, label)
         return self.module(mid)
 

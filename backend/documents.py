@@ -88,7 +88,7 @@ def classify_document(path: str | Path, study_root: str | Path) -> dict[str, Any
     }
 
 
-def _pdf_pages(path: Path) -> list[dict[str, Any]]:
+def _pdf_text_pages(path: Path) -> list[dict[str, Any]]:
     try:
         import fitz
     except ImportError:
@@ -103,6 +103,19 @@ def _pdf_pages(path: Path) -> list[dict[str, Any]]:
             raise ValueError("PDF ist passwortgeschützt und kann nicht gelesen werden.")
         return [{"page": i, "label": f"Seite {i}", "text": page.get_text("text")}
                 for i, page in enumerate(document, 1)]
+
+
+def _pdf_pages(path: Path) -> list[dict[str, Any]]:
+    """Text layer first; pages without one (scans, photos) go through the local OCR."""
+    from . import ocr
+    pages = _pdf_text_pages(path)
+    if any(page["text"].strip() for page in pages) and not ocr.available():
+        return pages  # A text PDF is complete without OCR; only its image pages stay unread.
+    try:
+        ocr.fill_missing_text(path, pages)
+    except ImportError as exc:
+        raise ValueError(f"Kein lesbarer Text gefunden; das PDF ist ein Scan. {exc}") from exc
+    return pages
 
 
 def _docx_pages(path: Path) -> list[dict[str, Any]]:
@@ -299,6 +312,11 @@ def _file_hash(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _is_hub_copy(directory: Path) -> bool:
+    """Another copy of this program inside the study folder (an earlier installation, a clone) is no study material."""
+    return (directory / "launcher.py").is_file() and (directory / "backend" / "main.py").is_file() and (directory / "frontend").is_dir()
+
+
 def scan_documents(study_root: str | Path, project_root: str | Path | None = None,
                    known_hashes: Mapping[str, str] | None = None) -> list[dict[str, Any]]:
     """Recursively index supported files while excluding generated project data.
@@ -308,6 +326,7 @@ def scan_documents(study_root: str | Path, project_root: str | Path | None = Non
     New and changed files return ``status=pending`` and a ``change`` indicator.
     All directory symlinks are skipped to avoid cycles; external file links and
     internal links pointing into the application project are also skipped.
+    Folders that hold another copy of this program are skipped as a whole.
     """
     root = Path(study_root).resolve(strict=True)
     if not root.is_dir():
@@ -324,7 +343,8 @@ def scan_documents(study_root: str | Path, project_root: str | Path | None = Non
         directories[:] = sorted(name for name in directories
                                 if name not in _IGNORED_DIRECTORIES and not name.startswith(".")
                                 and not (Path(current) / name).is_symlink()
-                                and not (Path(current) / name).resolve().is_relative_to(excluded))
+                                and not (Path(current) / name).resolve().is_relative_to(excluded)
+                                and not _is_hub_copy(Path(current) / name))
         for name in sorted(files):
             source = Path(current) / name
             if name.startswith(".") or name.startswith("~$") or source.suffix.lower() not in SUPPORTED_EXTENSIONS:
@@ -353,9 +373,11 @@ def scan_documents(study_root: str | Path, project_root: str | Path | None = Non
                     if (final_stat.st_mtime_ns, final_stat.st_size, final_stat.st_ino) != (initial_stat.st_mtime_ns, initial_stat.st_size, initial_stat.st_ino):
                         raise ValueError("Datei wurde während der Erfassung verändert; bitte erneut synchronisieren.")
                     record.update({"page_texts": page_texts, "pages": len(page_texts),
-                                   "text": "\n\n".join(page["text"] for page in page_texts)})
+                                   "text": "\n\n".join(page["text"] for page in page_texts),
+                                   "ocr_pages": sum(1 for page in page_texts if page.get("ocr"))})
                     if not record["text"].strip():
-                        raise ValueError("Kein lesbarer Text gefunden; gescannte Bilder benötigen OCR oder manuelle Aufbereitung.")
+                        raise ValueError("Kein lesbarer Text gefunden, auch nicht per Texterkennung (OCR). "
+                                         "Bitte den Scan in besserer Qualität oder als Textdokument ablegen.")
                     record["proposals"] = generate_proposals(record)
             except Exception as exc:
                 record.update({"status": "error", "error": f"{type(exc).__name__}: {exc}", "proposals": []})

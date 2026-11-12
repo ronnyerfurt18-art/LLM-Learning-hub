@@ -4,6 +4,36 @@ Die Rohfassung ist am 10.11.2026 aus dem privaten Master Learning Hub abgezweigt
 
 ---
 
+## 12.11.2026 – Stand vom 11.11.2026 aus dem privaten Hub übernommen
+
+**Anlass:** Am 11.11.2026 wurde im privaten Hub weiterentwickelt. Diese Fassung erhält denselben Programmstand; Lerninhalte, Daten und Einstellungen bleiben außen vor.
+
+**Neu:**
+- **Entwicklung, Stufe 1 und Chat:** Kleine Aufträge setzt das lokale KI-Modell nach Freigabe um (`backend/development_change.py`), mit Sicherung und „Zurücknehmen“. Ein Chat-Fenster führt eine Aufgabe in einem Lauf bis zum Urteil „erledigt / nicht erledigt“; der Hub baut und testet selbst (`backend/development_flow.py`, `frontend/src/DevChat.tsx`). Jede Anforderung zeigt Stand, Prüfpunkte und Verlauf.
+- **„KI fragen“ auf jeder Seite:** kleines Chat-Fenster, das den Inhalt der aktuellen Seite kennt (`backend/quick_chat.py`, `frontend/src/AskAi.tsx`, `pageContext.ts`). „Entwicklung“ liegt als Symbol in der Kopfleiste.
+- **Lernchat:** Quellenauswahl anhand der Frage, genannte Seiten und Abbildungen haben Vorrang. Mit „Länger nachdenken“ gehen belegte PDF-Seiten vollständig und bis zu zwei Abbildungen als Bild an das Modell (`backend/pdf_figures.py`); der Modul-Import beschreibt Abbildungen einmal lokal.
+- **Texterkennung (OCR):** Gescannte PDFs ohne Textebene werden lokal mit RapidOCR gelesen (`backend/ocr.py`). Neue Pakete in `requirements.txt` (`pypdfium2`, `pillow`, `rapidocr`, `onnxruntime`).
+- **Aufbereiten:** neues Modul direkt anlegen, Dokumentart je Datei wählbar, Klausuren und Übungen werden mit aufbereitet, freie Modulangaben (Modulnummer optional, freie Einheitenbezeichnungen).
+- **Dokumente:** Spalte „Stand“ statt „Zur Prüfung“, Entfernen verschiebt in `data/papierkorb/` (`backend/document_trash.py`).
+
+**Tests:** 453 automatische Tests bestanden (ohne die OCR-Pakete, in einer Arbeitskopie). Der Bau der Oberfläche wurde für diese Übernahme nicht erneut ausgeführt.
+
+**Hinweis:** Nach dem Aktualisieren einmal `Installation.command` ausführen (neue Pakete, Oberfläche bauen).
+
+---
+
+## 11.11.2026 – Dateierkennung lässt Kopien des Programms im Studienordner aus
+
+**Anlass:** Beim Umzug eines älteren Hubs auf diese Fassung liegt der alte Programmordner weiter im Studienordner. Seine Anleitungen, Logs und Sicherungen wären als Lernunterlagen eingelesen worden.
+
+**Änderung (`backend/documents.py`):** Ein Ordner, der `launcher.py`, `backend/main.py` und einen Ordner `frontend` enthält, wird beim Einlesen als Ganzes übersprungen. Der laufende Programmordner war schon bisher ausgenommen.
+
+**Tests:** `tests/test_documents.py` um einen Fall ergänzt.
+
+**Rückgängig machen:** `_is_hub_copy` und seinen Aufruf in `scan_documents` entfernen.
+
+---
+
 ## 11.11.2026 – Abzweig „Entwicklung“: Anforderungen, Auftrag durch das KI-Modell, Einstufung, Übergabe-Prompt
 
 **Anlass:** Änderungen am Hub sollen im Hub selbst erfasst und mit dem lokalen KI-Modell vorbereitet werden. Reicht das lokale KI-Modell nicht, soll ein fertiger Prompt für eine externe KI entstehen.

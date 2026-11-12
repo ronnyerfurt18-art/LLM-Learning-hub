@@ -18,9 +18,10 @@ from pathlib import Path
 
 from fastapi import HTTPException
 
-from .content_files import PACKAGE_LOCK, backup_file, find_package, module_number, write_json
+from .content_files import PACKAGE_LOCK, backup_file, find_package, draft_file, module_key, write_json
 from .core import validate_import
-from .learning_pages import validate_learning_page
+from .learning_pages import resolve_study_source, validate_learning_page
+from . import pdf_figures
 from .local_generation import OUTPUT_TOKENS, REQUEST_TIMEOUT, ollama_generator as _ollama_generator, parse_json  # noqa: F401
 from .local_model import local_json
 
@@ -31,6 +32,13 @@ WINDOW_PAGES = 12
 MIN_PAGE_CHARS = 200
 # Best available kind per unit wins: course letters, then slides, then PDFs the scan could not classify.
 SOURCE_KINDS = ('course_material', 'lecture', 'other')
+# Practice material (exams, exercises, solutions, summaries) is read in addition to the unit's main source.
+EXTRA_KINDS = ('exam', 'exercise', 'solution', 'summary')
+# Every kind a user may set by hand; the labels match the documents page.
+DOCUMENT_KINDS = {'course_material': 'Studienunterlagen (Lehrbrief, Skript)', 'lecture': 'Vorlesungsunterlagen (Folien)',
+                  'exam': 'Altklausur / Klausurfragen', 'solution': 'Musterlösung', 'exercise': 'Übungsaufgaben',
+                  'summary': 'Lernzusammenfassung', 'assignment': 'Einsendeaufgabe', 'exam_info': 'Prüfungshinweise',
+                  'administrative': 'Studienverwaltung', 'other': 'Weitere Unterlagen'}
 QUESTION_TYPES = ('flashcard', 'single_choice', 'multiple_choice', 'free_text')
 MINUTES_PER_WINDOW = 5
 DRAFTS = 'entwuerfe'
@@ -137,7 +145,9 @@ def page_windows(page_texts):
 
 
 def source_kind(row):
-    """Course letters keep their role even inside a folder whose name suggests summaries."""
+    """A kind chosen by hand wins; course letters keep their role even inside a folder whose name suggests summaries."""
+    if row.get('manual_kind') in DOCUMENT_KINDS:
+        return row['manual_kind']
     if _COURSE_LETTER.match(row.get('name') or Path(row.get('path', '')).name):
         return 'course_material'
     return row.get('kind')
@@ -155,8 +165,8 @@ def plan_sources(hub, module_id, units=None):
         if row.get('module_id') != module_id or row['path'].startswith('@imports/'):
             continue
         row = {**row, 'kind': source_kind(row)}
-        if row['kind'] not in SOURCE_KINDS:
-            ignored.append({'path': row['path'], 'reason': 'Nach dem Dateinamen keine Lernunterlage (zum Beispiel Klausur, Lösung, Übung oder Zusammenfassung); wird nicht aufbereitet.'})
+        if row['kind'] not in SOURCE_KINDS + EXTRA_KINDS:
+            ignored.append({'path': row['path'], 'reason': f'Als „{DOCUMENT_KINDS.get(row["kind"], "Weitere Unterlagen")}“ eingeordnet; wird nicht aufbereitet. Ändere die Art, wenn die Datei Lernstoff enthält.'})
         elif row.get('status') in ('error', 'missing'):
             ignored.append({'path': row['path'], 'reason': 'Die Datei ist nicht mehr vorhanden.' if row['status'] == 'missing'
                             else 'Die Datei konnte nicht gelesen werden.'})
@@ -169,12 +179,13 @@ def plan_sources(hub, module_id, units=None):
     result = []
     for unit in sorted(by_unit):
         rows = sorted(by_unit[unit], key=lambda row: row['path'])
-        best = min(SOURCE_KINDS.index(row['kind']) for row in rows)
-        primary = [row for row in rows if SOURCE_KINDS.index(row['kind']) == best]
+        main = [row for row in rows if row['kind'] in SOURCE_KINDS]
+        best = min((SOURCE_KINDS.index(row['kind']) for row in main), default=None)
+        primary = [row for row in main if SOURCE_KINDS.index(row['kind']) == best]
         skipped.extend({'path': row['path'], 'reason': 'Folien nicht verwendet, weil für die Kurseinheit ein Lehrbrief vorliegt.'
                         if row['kind'] == 'lecture' else 'Nicht verwendet, weil für die Kurseinheit ein Lehrbrief oder Folien vorliegen.'}
-                       for row in rows if row not in primary)
-        for row in primary:
+                       for row in main if row not in primary)
+        for row in primary + [row for row in rows if row['kind'] in EXTRA_KINDS]:
             document = hub.document(row['id'])
             windows = page_windows(document.get('page_texts'))
             if not windows:
@@ -192,7 +203,7 @@ def select_sources(hub, module_id, units=None):
 
 
 def draft_path(project, module):
-    return Path(project) / 'imports' / DRAFTS / f"{module.get('number') or _slug(module['name'])}-learning-pages.json"
+    return draft_file(project, module, 'learning-pages', _slug(module['name']))
 
 
 def _lesson_counts(package):
@@ -203,7 +214,7 @@ def _lesson_counts(package):
     return counts
 
 
-def overview(hub, project, module_id):
+def overview(hub, project, module_id, source_root=None):
     """Documents, drafts and published lessons per unit: what the module import screen shows."""
     module = hub.module(module_id)
     sources, skipped, ignored = plan_sources(hub, module_id)
@@ -212,7 +223,7 @@ def overview(hub, project, module_id):
     units, loose = {}, []
     for row in sorted((row for row in hub.documents() if row.get('module_id') == module_id and not row['path'].startswith('@imports/')),
                       key=lambda row: row['path']):
-        item = {'path': row['path'], 'name': row.get('name') or Path(row['path']).name, 'kind': source_kind(row),
+        item = {'id': row['id'], 'manual_kind': row.get('manual_kind'), 'path': row['path'], 'name': row.get('name') or Path(row['path']).name, 'kind': source_kind(row),
                 'pages': row.get('pages', 0), 'usable': row['path'] in usable, 'reason': reasons.get(row['path'])}
         if type(row.get('unit')) is int:
             units.setdefault(row['unit'], []).append(item)
@@ -223,12 +234,18 @@ def overview(hub, project, module_id):
         draft = json.loads(draft_file.read_text(encoding='utf-8')) if draft_file.is_file() else {}
     except (ValueError, OSError):
         draft = {}
-    _, published = find_package(project, module_number(module))
+    errors = []
+    if draft_file.is_file() and source_root is not None:
+        candidate = dict(draft) if isinstance(draft, dict) else draft
+        if isinstance(candidate, dict):
+            candidate.update(module_id=module['id'], module_number=module.get('number') or '', module_title=module['name'])
+        errors = validate_learning_page(candidate, source_root, project)
+    _, published = find_package(project, module)
     drafted, released = _lesson_counts(draft), _lesson_counts(published)
     return {'module_id': module_id, 'module_number': module.get('number') or '',
             'units': [{'unit': unit, 'documents': units.get(unit, []), 'draft_lessons': drafted.get(unit, 0),
                        'published_lessons': released.get(unit, 0)} for unit in sorted({*units, *drafted, *released})],
-            'unassigned_documents': loose, 'draft': bool(drafted), 'has_learning_pages': published is not None}
+            'draft_errors': errors, 'unassigned_documents': loose, 'draft': bool(drafted), 'has_learning_pages': published is not None}
 
 
 def preview(hub, module_id, units=None):
@@ -246,10 +263,17 @@ def ollama_generator(model, request=local_json):
     return _ollama_generator(model, request, SCHEMA, OUTPUT_TOKENS)
 
 
-def window_messages(module, source, window):
+def window_messages(module, source, window, figures=None):
     pages = '\n\n'.join(f"[PDF-Seite {page['page']}]\n{page['text']}" for page in window)
+    extra = ''
+    if figures:
+        # Model-written, not source text: kept outside the quoted pages so it can never serve as a verbatim quote.
+        extra = ('\n\nABBILDUNGEN (Beschreibung durch lokale Bildauswertung, kein Originaltext; nutze sie zur Erklärung, '
+                 'zitiere aber nur aus dem AUSSCHNITT)\n'
+                 + '\n\n'.join(f"[PDF-Seite {item['page']}] {item['caption']}\n{item['description']}" for item in figures)
+                 + '\nENDE DER ABBILDUNGEN')
     return [{'role': 'system', 'content': INSTRUCTIONS},
-            {'role': 'user', 'content': f"Modul: {module['name']}\nKurseinheit: {source['unit']}\n\nAUSSCHNITT\n{pages}\nENDE DES AUSSCHNITTS"}]
+            {'role': 'user', 'content': f"Modul: {module['name']}\nKurseinheit: {source['unit']}\n\nAUSSCHNITT\n{pages}\nENDE DES AUSSCHNITTS{extra}"}]
 
 
 def _texts(value):
@@ -267,7 +291,8 @@ def _slug(value):
 
 
 def source_title(module, source):
-    label = {'course_material': 'Lehrbrief', 'lecture': 'Folien'}.get(source['kind'], 'Unterlage')
+    label = {'course_material': 'Lehrbrief', 'lecture': 'Folien', 'exam': 'Klausur', 'exercise': 'Übung', 'solution': 'Lösung',
+             'summary': 'Zusammenfassung'}.get(source['kind'], 'Unterlage')
     return f"{module['name']} · Kurseinheit {source['unit']} · {label}"
 
 
@@ -303,7 +328,7 @@ def _question(raw, module, source, pages, model, fallback_topic):
         extra['keywords'] = keywords
     difficulty = raw.get('difficulty')
     author = f'Lokales Modell ({model})'
-    number = module.get('number') or module['id']
+    number = module_key(module)
     result = {
         'id': f"{number}-KE{source['unit']}-LOK-" + hashlib.sha256(_norm(question).encode('utf-8')).hexdigest()[:10],
         'unit': source['unit'], 'topic': _text(raw.get('topic')) or fallback_topic, 'type': kind, 'question': question,
@@ -368,7 +393,7 @@ def build_package(module, lessons, model):
     per_unit = {unit: [lesson for lesson in lessons if lesson['unit'] == unit] for unit in units}
     today = datetime.now().strftime('%d.%m.%Y')
     return {
-        'schema_version': 1, 'module_number': module.get('number') or '', 'module_title': module['name'],
+        'schema_version': 1, 'module_id': module['id'], 'module_number': module.get('number') or '', 'module_title': module['name'],
         'overview': {
             'title': f"{module['name']}: Lernpfad durch das Modul",
             'paragraphs': [
@@ -391,6 +416,8 @@ class ModuleImport:
         self.cache = self.data / 'module-import'
         self._lock, self._cancel, self._thread = threading.Lock(), threading.Event(), None
         self._state = {'state': 'idle', 'messages': []}
+        # Optional describe(image_b64, caption) -> text; set by the route when the model reads images.
+        self.describe = None
 
     def status(self):
         with self._lock:
@@ -436,6 +463,26 @@ class ModuleImport:
             if gate is not None:
                 gate.release()
 
+    def _figures(self, source, window, describe, gate, label):
+        """Describe the captioned figures of a window; any failure only loses the descriptions."""
+        while gate is not None and not gate.acquire(timeout=2):
+            if self._cancel.is_set():
+                raise InterruptedError
+        try:
+            path = resolve_study_source(self.source, self.project, source['path'])
+            figures = pdf_figures.window_figures(path, window, describe, self.data / 'figure-cache')
+            if figures:
+                self._update(f"{label}: {len(figures)} Abbildung(en) lokal ausgewertet.")
+            return figures
+        except InterruptedError:
+            raise
+        except Exception as exc:
+            self._update(f'{label}: Abbildungen nicht ausgewertet ({type(exc).__name__}); weiter mit Text.')
+            return None
+        finally:
+            if gate is not None:
+                gate.release()
+
     def run(self, module_id, units, model, generate, gate=None):
         """Synchronous job body; also used directly by the command line tool."""
         try:
@@ -459,7 +506,12 @@ class ModuleImport:
                     first, last = window[0]['page'], window[-1]['page']
                     label = f"Kurseinheit {source['unit']} · PDF-S. {first}–{last}"
                     self._update(current=label)
-                    key = hashlib.sha256(json.dumps([PROMPT_VERSION, model, source['sha256'], source['path'], first, last]).encode()).hexdigest()[:32]
+                    describe = self.describe
+                    has_figures = bool(describe) and any(pdf_figures.captions(page.get('text')) for page in window)
+                    key_parts = [PROMPT_VERSION, model, source['sha256'], source['path'], first, last]
+                    if has_figures:
+                        key_parts.append('figures-1')  # windows without figures keep their existing cache
+                    key = hashlib.sha256(json.dumps(key_parts).encode()).hexdigest()[:32]
                     cached, data = self.cache / f'{key}.json', None
                     if cached.is_file():
                         try:
@@ -469,7 +521,8 @@ class ModuleImport:
                             data = None
                     if data is None:
                         try:
-                            data = self._generate(generate, gate, window_messages(module, source, window))
+                            figures = self._figures(source, window, describe, gate, label) if has_figures else None
+                            data = self._generate(generate, gate, window_messages(module, source, window, figures))
                             cached.write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
                         except InterruptedError:
                             continue
@@ -478,7 +531,7 @@ class ModuleImport:
                             self._update(f'{label}: keine verwertbare Modellantwort ({type(exc).__name__}). Abschnitt übersprungen.')
                     if data is not None:
                         sequence[source['unit']] = sequence.get(source['unit'], 0) + 1
-                        lesson_id = f"{module.get('number') or module['id']}-KE{source['unit']}-L{sequence[source['unit']]:02}"
+                        lesson_id = f"{module_key(module)}-KE{source['unit']}-L{sequence[source['unit']]:02}"
                         lesson, accepted, rejected, unproven = build_lesson(data, module, source, window, model, lesson_id)
                         counts['rejected_questions'] += len(rejected)
                         counts['unproven_sections'] += unproven
@@ -495,7 +548,10 @@ class ModuleImport:
                     with self._lock:
                         self._state['done'] += 1
             outputs = self._write(module, model, lessons, questions, {source['unit'] for source in sources})
-            self._update('Fertig. Fragen unter „Dokumente“ prüfen und importieren; den Lernseiten-Entwurf prüfen und veröffentlichen.',
+            message = ('Aufbereitung abgeschlossen. Der Entwurf muss vor der Veröffentlichung korrigiert werden.'
+                       if outputs.get('draft_errors') else
+                       'Entwurf erstellt. Fragen unter „Dokumente“ prüfen und importieren; den Lernseiten-Entwurf prüfen und veröffentlichen.')
+            self._update(message,
                          state='done', finished_at=_now(), current='', counts=counts, outputs=outputs)
         except Exception as exc:
             self._update(str(exc).strip("'") if isinstance(exc, (ValueError, KeyError)) else f'Unerwarteter Fehler: {type(exc).__name__}',
@@ -545,8 +601,8 @@ class ModuleImport:
             raise ValueError('Der Entwurf ist kein gültiges Lernpaket.')
         content = self.project / 'content'
         with PACKAGE_LOCK:
-            number = package.get('module_number')
-            target, existing = find_package(self.project, number) if isinstance(number, str) else (None, None)
+            package.update(module_id=module['id'], module_number=module.get('number') or '', module_title=module['name'])
+            target, existing = find_package(self.project, module)
             if target is None:
                 errors = validate_learning_page(package, self.source, self.project)
                 if errors:
@@ -560,6 +616,7 @@ class ModuleImport:
                 return {'published': target.relative_to(self.project).as_posix(), 'lessons': len(package['lessons']),
                         'added_units': units, 'skipped_units': []}
             merged, added, skipped = merge_package(existing, package)
+            merged.update(module_id=module['id'], module_number=module.get('number') or '', module_title=module['name'])
             errors = validate_learning_page(merged, self.source, self.project)
             if errors:
                 raise ValueError('Das ergänzte Lernpaket wäre nicht gültig, es wurde nichts geschrieben: ' + '; '.join(errors[:10]))
@@ -654,13 +711,32 @@ def register_module_import_routes(app, hub, project_root, source_root, data_dir=
             raise ValueError('Kurseinheiten als Liste von Zahlen zwischen 1 und 999 angeben.')
         return sorted(set(units))
 
+    @app.get('/api/module-import/kinds')
+    def import_kinds():
+        return [{'kind': kind, 'label': label, 'prepared': kind in SOURCE_KINDS + EXTRA_KINDS} for kind, label in DOCUMENT_KINDS.items()]
+
+    @app.patch('/api/documents/{did}/kind')
+    def set_document_kind(did: int, value: dict):
+        kind = value.get('kind')
+        if kind is not None and kind not in DOCUMENT_KINDS:
+            raise HTTPException(422, 'Unbekannte Dokumentart.')
+        document = hub.document(did)
+        document.pop('id', None)
+        if kind is None:
+            document.pop('manual_kind', None)
+        else:
+            document['manual_kind'] = kind
+        with hub.db() as db:
+            db.execute('UPDATE documents SET payload=? WHERE id=?', (json.dumps(document, ensure_ascii=False), did))
+        return {'id': did, 'kind': source_kind(document), 'manual_kind': document.get('manual_kind')}
+
     @app.get('/api/module-import/preview')
     def import_preview(module_id: str):
         return preview(hub, module_id)
 
     @app.get('/api/module-import/overview')
     def import_overview(module_id: str):
-        return overview(hub, project_root, module_id)
+        return overview(hub, project_root, module_id, source_root)
 
     @app.get('/api/module-import')
     def import_status():
@@ -676,6 +752,7 @@ def register_module_import_routes(app, hub, project_root, source_root, data_dir=
         if generate is None:
             try:
                 generate = ollama_generator(tutor.model)
+                job.describe = pdf_figures.ollama_describer(tutor.model)
             except ValueError as exc:
                 raise HTTPException(503, str(exc))
             except OSError:

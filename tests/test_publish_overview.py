@@ -69,7 +69,7 @@ def test_publish_creates_the_file_when_the_module_has_none():
         assert answer.status_code == 200, answer.text
         assert answer.json() == {'published': 'content/lernen-lernen-demo-learning-pages.json', 'lessons': 4,
                                  'added_units': [1, 2], 'skipped_units': []}
-        assert json.loads((project / answer.json()['published']).read_text(encoding='utf-8')) == full
+        assert json.loads((project / answer.json()['published']).read_text(encoding='utf-8')) == {**full, 'module_id': 'M-10001'}
         assert not (project / 'data' / 'backups').exists()
 
 
@@ -95,8 +95,8 @@ def test_publish_adds_a_new_unit_and_keeps_everything_published():
         assert after['overview']['learning_path'][1].startswith('Kurseinheit 2: ')
         for key in ('title', 'paragraphs', 'sources'):
             assert after['overview'][key] == before['overview'][key]
-        assert {key: value for key, value in after.items() if key not in ('lessons', 'overview')} == \
-            {key: value for key, value in before.items() if key not in ('lessons', 'overview')}
+        assert {key: value for key, value in after.items() if key not in ('lessons', 'overview', 'module_id')} == \
+            {key: value for key, value in before.items() if key not in ('lessons', 'overview', 'module_id')}
         assert len(served['lessons']) == 4
         # The previous file is kept as a copy before it is changed.
         copies = list((project / 'data' / 'backups').glob('lernen-lernen-learning-pages-*.json'))
@@ -207,8 +207,8 @@ def test_overview_per_unit_uses_the_rules_of_the_preview():
             plan = client.get('/api/module-import/preview', params={'module_id': mid}).json()
         assert (data['module_id'], data['module_number'], data['draft'], data['has_learning_pages']) == (mid, '32711', False, False)
         assert [item['unit'] for item in data['units']] == [1, 2]
-        by_name = {doc['name']: doc for unit in data['units'] for doc in unit['documents']}
-        by_name.update({doc['name']: doc for doc in data['unassigned_documents']})
+        by_name = {doc['name']: {k: v for k, v in doc.items() if k not in ('id', 'manual_kind')} for unit in data['units'] for doc in unit['documents']}
+        by_name.update({doc['name']: {k: v for k, v in doc.items() if k not in ('id', 'manual_kind')} for doc in data['unassigned_documents']})
         assert by_name['32711-01-lehrbrief.pdf'] == {
             'path': '32711 BI/32711-01-lehrbrief.pdf', 'name': '32711-01-lehrbrief.pdf', 'kind': 'course_material',
             'pages': 5, 'usable': True, 'reason': None}

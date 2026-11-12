@@ -263,6 +263,22 @@ class ScannerTests(unittest.TestCase):
         self.assertEqual(record["status"], "error")
         self.assertIn("OCR", record["error"])
 
+    def test_another_copy_of_the_program_inside_the_study_folder_is_not_indexed(self):
+        (self.module / "notes.txt").write_text("Frage: Was ist Diversität?\nAntwort: Verschiedenheit.", encoding="utf-8")
+        copy = self.root / "alter-hub"
+        for name in ("launcher.py", "backend/main.py", "frontend/README.md", "docs/anleitung.md", "data/notiz.txt", "README.md"):
+            (copy / name).parent.mkdir(parents=True, exist_ok=True)
+            (copy / name).write_text("Programmdatei, kein Lernstoff", encoding="utf-8")
+        # A folder that merely looks similar stays study material: all three marks are needed.
+        partial = self.root / "kurs-mit-skript"
+        (partial / "backend").mkdir(parents=True)
+        (partial / "launcher.py").write_text("print(1)", encoding="utf-8")
+        (partial / "backend" / "main.py").write_text("print(1)", encoding="utf-8")
+        (partial / "mitschrift.md").write_text("Mitschrift zur Vorlesung", encoding="utf-8")
+        project = self.root.parent / (self.root.name + "-programm")  # the running program lies outside the study folder
+        self.assertEqual(sorted(row["path"] for row in scan_documents(self.root, project)),
+                         ["1.semester/32281 Diversität/Session1/notes.txt", "kurs-mit-skript/mitschrift.md"])
+
     def test_missing_root_is_reported(self):
         with self.assertRaises(FileNotFoundError):
             scan_documents(self.root / "missing")

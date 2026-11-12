@@ -1,4 +1,4 @@
-:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);background:var(--bg);font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;color-scheme:light;--bg:#edf1f4;--surface:#ffffff;--surface-alt:#e1e8ee;--text:#182d3a;--muted:#485e6d;--border:#b2bec8;--control-border:#677d8a;--input-bg:#ffffff;--focus:#075bbc;--accent:#14675f;--accent-strong:#0b4e48;--accent-light:#dcefe8;--nav:#183a3e;--red:#a2362c;--yellow:#79520e;--green:#256242;--hero:#e0ece5;--shadow:0 10px 35px #173c4010}
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);background:var(--bg);font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;color-scheme:light;--bg:#edf1f4;--surface:#ffffff;--surface-alt:#e1e8ee;--text:#182d3a;--muted:#485e6d;--border:#b2bec8;--control-border:#677d8a;--input-bg:#ffffff;--focus:#075bbc;--accent:#14675f;--accent-strong:#0b4e48;--accent-light:#dcefe8;--nav:#183a3e;--red:#a2362c;--yellow:#79520e;--green:#256242;--hero:#e0ece5;--shadow:0 10px 35px #173c40}
 :root[data-theme=dark]{
   color-scheme:dark;
   --bg:#000;

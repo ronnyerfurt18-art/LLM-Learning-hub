@@ -325,7 +325,9 @@ def test_model_drafts_the_order_and_the_hub_files_it(hub):
     assert [item['path'] for item in order['files']] == ['backend/tutor.py'] and order['dropped_files'] == ['backend/erfunden.py']
     assert (order['route'], order['route_by'], order['tests']) == ('local', 'hub', ['tests/test_tutor.py'])
     assert '### Ziel' in detail['prompt'] and 'backend/erfunden.py' not in detail['prompt']
-    assert hub.get('/api/development').json()['requests'][0] | {'updated_at': ''} == {
+    listed = hub.get('/api/development').json()['requests'][0]
+    assert listed.pop('outcome') == {'label': 'Auftrag liegt vor, noch nichts geändert', 'tone': 'teal', 'checks': []}
+    assert listed | {'updated_at': ''} == {
         'id': 'E-001', 'title': 'Antwortzeit im Lernchat zeigen', 'status': 'drafted', 'created_at': detail['created_at'],
         'updated_at': '', 'has_order': True, 'route': 'local'}
     # The person may overrule the hub's route; the order itself stays.

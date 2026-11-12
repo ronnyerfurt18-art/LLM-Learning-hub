@@ -83,7 +83,7 @@ function StudySelection({ bundle, lessonId, sectionId, conceptId, onSelect, modu
     </section>
       {!invalid && <section className="card tutor-focus" aria-labelledby="tutor-focus-title">
         <span className="eyebrow">DEIN AKTUELLER LERNSTOFF</span><h2 id="tutor-focus-title">Thema &amp; Quellen</h2><h3>{title}</h3>
-        <p><strong>{bundle.module_title} ({bundle.module_number}){lesson || concept ? ` · ${unitCaption(bundle, selectedUnits)}` : ' · Modulüberblick'}</strong>{unitTitles.map(item => <span key={item.unit}><br />{unitLabel} {item.unit} · {item.title}</span>)}</p>
+        <p><strong>{bundle.module_title}{bundle.module_number ? ` (${bundle.module_number})` : ''}{lesson || concept ? ` · ${unitCaption(bundle, selectedUnits)}` : ' · Modulüberblick'}</strong>{unitTitles.map(item => <span key={item.unit}><br />{unitLabel} {item.unit} · {item.title}</span>)}</p>
         <p>{section ? 'Du lernst gezielt diesen Abschnitt.' : lesson?.summary || concept?.summary || 'Ein erster Überblick über die Zusammenhänge. Für einzelne Inhalte wähle eine Lernseite oder einen Baustein.'}</p>
         <SourceLinks sources={sources} title="Daraus lernst du gerade" pdfLabel="Originalheft öffnen" />
         {!sources.length && <p>Für diese Auswahl ist keine Originalquelle hinterlegt.</p>}
@@ -99,7 +99,7 @@ export function TutorPage({ modules, moduleId, lessonId, sectionId, conceptId, o
   const content = useLoad(() => available ? api<LearningPagesPackage>(`/learning-pages/${encodeURIComponent(moduleId)}`) : Promise.resolve<LearningPagesPackage | null>(null), [moduleId, available]);
   const moduleOptions = modules.map(module => ({ id: module.id, label: `${module.number} · ${module.name}` }));
   for (const summary of summaries.data || []) {
-    if (!moduleOptions.some(item => item.id === summary.module_id)) moduleOptions.push({ id: summary.module_id, label: `${summary.module_number} · ${summary.module_title}` });
+    if (!moduleOptions.some(item => item.id === summary.module_id)) moduleOptions.push({ id: summary.module_id, label: `${summary.module_number ? `${summary.module_number} · ` : ''}${summary.module_title}` });
   }
   const selection = <Field label="Studienmodul"><select value={moduleId} onChange={event => onSelect(event.target.value)}>
     <option value="">Modul auswählen</option>

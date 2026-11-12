@@ -45,7 +45,7 @@ export type TutorScope = { module_id: string; lesson_id?: string; section_id?: s
 type HistoryItem = { role: 'user' | 'assistant'; content: string };
 type Message = HistoryItem & { id: number; sources?: TutorSource[]; excerpts?: Record<string, Excerpt[]>; figures?: TutorFigure[]; notice?: string; responseSeconds?: number; firstTokenSeconds?: number; thinking?: string };
 type ChatRequest = TutorScope & { goal_id?: string; message: string; history: HistoryItem[]; think?: boolean };
-type ChatResponse = { answer: string; sources: TutorSource[]; provider: string; model: string; notice: string };
+type ChatResponse = { answer: string; sources: TutorSource[]; provider: string; model: string; notice: string; excerpts?: Record<string, Excerpt[]>; figures?: TutorFigure[] };
 type StreamEvent = { type: 'delta'; text: string } | { type: 'thinking'; text: string } | ({ type: 'done' } & ChatResponse) | { type: 'error'; status?: number; detail?: unknown };
 
 const learningStarts = [
@@ -111,7 +111,7 @@ async function streamChat(body: ChatRequest, signal: AbortSignal, onDelta: (text
         if (!event) continue;
         if (event.type === 'delta') onDelta(event.text);
         else if (event.type === 'thinking') onThinking(event.text);
-        else if (event.type === 'done') finished = { answer: event.answer, sources: event.sources, provider: event.provider, model: event.model, notice: event.notice };
+        else if (event.type === 'done') finished = { answer: event.answer, sources: event.sources, provider: event.provider, model: event.model, notice: event.notice, excerpts: event.excerpts, figures: event.figures };
         else throw new TutorRequestError(typeof event.detail === 'string' ? event.detail : 'Der Lernbegleiter konnte nicht antworten.', event.status || 502);
       }
       if (chunk.done) break;
@@ -161,7 +161,7 @@ function AssistantAnswer({ message, seconds }: { message: Message; seconds: (val
           <div className="tutor-reading-content">
           <div className="tutor-reading-actions">{source.kind === 'video'
             ? <SourceDocumentLink path={source.path} timestamp={source.timestamp_seconds} end={source.timestamp_end_seconds}>Im Video ansehen</SourceDocumentLink>
-            : <SourceDocumentLink path={source.path} page={source.pdf_page} pageEnd={source.pdf_page_end}>Im Original öffnen · PDF-Seite {source.pdf_page}</SourceDocumentLink>}</div>
+            : <SourceDocumentLink path={source.path} page={parts[0]?.pdf_page ?? source.pdf_page} pageEnd={source.pdf_page_end}>Im Original öffnen · PDF-Seite {parts[0]?.pdf_page ?? source.pdf_page}</SourceDocumentLink>}</div>
           {parts.length ? parts.map(part => <blockquote key={part.pdf_page} className="tutor-excerpt" tabIndex={0} aria-label={`Originalauszug, PDF-Seite ${part.pdf_page}`}><small>Originalauszug · PDF-Seite {part.pdf_page}</small><div className="tutor-excerpt-text">{part.text}</div></blockquote>)
             : <p className="tutor-notice">Für diese Quelle ist kein Originalauszug beigefügt. Bitte im Original nachlesen.</p>}
           </div>
@@ -185,16 +185,6 @@ function figuresFor(message: Message, cited: TutorSource[]): TutorFigure[] {
 function mentionsFigure(text: string, caption: string) {
   const number = /Abb(?:ildung|\.)?\s*(\d+)/i.exec(caption)?.[1];
   return !!number && new RegExp(`Abb(?:ildung|\\.)?\\s*${number}(?!\\d)`, 'i').test(text);
-}
-
-/** The server sends positions only; the excerpt text is cut from context_text. */
-function resolveExcerpts(context: TutorContext | null): Record<string, Excerpt[]> | undefined {
-  if (!context?.excerpts) return undefined;
-  const result: Record<string, Excerpt[]> = {};
-  for (const [id, spans] of Object.entries(context.excerpts)) {
-    result[id] = spans.map(span => ({ pdf_page: span.pdf_page, text: context.context_text.slice(span.start, span.end) }));
-  }
-  return result;
 }
 
 function requestHistory(messages: Message[]): HistoryItem[] {
@@ -380,7 +370,7 @@ export function TutorWorkspace({ scope, moduleTitle }: { scope: TutorScope; modu
       try { localStorage.setItem(timingKey, JSON.stringify(nextTimings)); setTimingSaved(true); } catch { setTimingSaved(false); }
       setMessages(previous => [...previous,
         { id: nextMessageId.current++, role: 'user', content: request.message },
-        { id: nextMessageId.current++, role: 'assistant', content: response.answer, responseSeconds, firstTokenSeconds: firstTokenAt.current ?? undefined, sources: response.sources, excerpts: resolveExcerpts(context), figures: context?.figures, notice: response.notice, thinking: thinkingRef.current.trim() || undefined },
+        { id: nextMessageId.current++, role: 'assistant', content: response.answer, responseSeconds, firstTokenSeconds: firstTokenAt.current ?? undefined, sources: response.sources, excerpts: response.excerpts, figures: response.figures, notice: response.notice, thinking: thinkingRef.current.trim() || undefined },
       ]);
       setStreamText(''); setThinkText('');
       setActiveTurn(null);
@@ -445,7 +435,7 @@ export function TutorWorkspace({ scope, moduleTitle }: { scope: TutorScope; modu
         <article className="tutor-message tutor-message-user" aria-label="Deine Frage"><strong className="tutor-message-author">Du · Deine Nachricht</strong><p className="preserve-lines">{activeTurn.message}</p></article>
         {streamText && <article ref={streamArticle} className="tutor-message tutor-message-assistant tutor-message-streaming" aria-label="Antwort des Lernbegleiters entsteht" aria-busy="true">
           <strong className="tutor-message-author">Lernbegleiter · KI-Antwort entsteht …</strong>
-          <AnswerText text={streamText} sources={context?.sources || []} highlightTask />
+          <AnswerText text={streamText} sources={[]} highlightTask />
         </article>}
         {sending && <div className="tutor-sending" role="status"><span className="spinner" /> {streamText ? 'Der Lernbegleiter schreibt' : thinkText ? `Der Lernbegleiter denkt nach (${thinkText.trim().split(/\s+/).length} Wörter)` : 'Der Lernbegleiter liest den Lernstoff'} … {seconds(elapsed)}</div>}
         {chatError && <div className="tutor-chat-error" role="alert"><strong>Es ist noch keine Antwort angekommen.</strong><p>{chatError}</p><div className="button-row">
@@ -502,9 +492,9 @@ export function TutorWorkspace({ scope, moduleTitle }: { scope: TutorScope; modu
       <Button className="secondary small" onClick={() => setVersion(value => value + 1)}>Kontext erneut laden</Button>
     </div> : context && <>
       <div className="tutor-knowledge">
-        <span className="eyebrow">DAS VERWENDET DER TUTOR</span><h3>{context.title}</h3>
+        <span className="eyebrow">AUSGANGSPUNKT FÜR DEIN GESPRÄCH</span><h3>{context.title}</h3>
         <p>{moduleTitle} · Ausgewählte Lerntexte{context.sources.length ? ` · ${context.sources.length} ${context.sources.length === 1 ? 'Quellenverweis' : 'Quellenverweise'}` : ' · Keine Originalquelle verknüpft'}</p>
-        <p>Der Tutor erhält diese Auswahl und begrenzte Quellenauszüge. Er durchsucht nicht automatisch alle Unterlagen oder das Internet. Deine freie Frage ändert diese Auswahl nicht.</p>
+        <p>Im Modulchat wählt der Hub anhand deiner Frage eine passende Lernseite. Bei Nachfragen berücksichtigt er das bisherige Thema. Genannte PDF-Seiten und Abbildungen sucht er innerhalb der ausgewählten Quellen. Die tatsächlich beigefügten Auszüge stehen unter jeder Antwort.</p>
         <details><summary>Quellen und Umfang ansehen</summary>
           <SourceLinks sources={sourcesForDisplay(context.sources)} title="Verknüpfte Quellen zum Nachlesen" />
           {context.notice && <p className="tutor-notice">{context.notice}</p>}
@@ -519,8 +509,8 @@ export function TutorWorkspace({ scope, moduleTitle }: { scope: TutorScope; modu
     </div><p className="tutor-export-hint">Mit vollständigem Lernkontext und Quellen. Du entscheidest, wo du den Lernauftrag verwendest.</p>
       {copyNotice && <p className="tutor-copy-notice" role="status">{copyNotice}</p>}
     </div>
-    {!!context && <details className="tutor-preview"><summary>{status?.configured ? 'An das Modell übermittelte Texte – Vorschau der nächsten Anfrage' : 'Vorschau des vorbereiteten Lernauftrags'}</summary>
-      <p>Die Vorschau zeigt den vorbereiteten Lernauftrag. Für das lokale Modell werden lange Quellenauszüge und ältere Nachrichten bei Bedarf gekürzt; die Antwort weist darauf hin. Verwendet werden höchstens sechs letzte Frage-Antwort-Paare.</p>
+    {!!context && <details className="tutor-preview"><summary>{status?.configured ? 'Vorbereiteter Lernauftrag vor der thematischen Quellenauswahl' : 'Vorschau des vorbereiteten Lernauftrags'}</summary>
+      <p>Die Vorschau zeigt den Ausgangskontext. Beim Senden kann der Hub passend zur Frage andere Lerntexte und Belege auswählen. Für das lokale Modell werden lange Quellenauszüge und ältere Nachrichten bei Bedarf gekürzt; die Antwort weist darauf hin. Verwendet werden höchstens sechs letzte Frage-Antwort-Paare.</p>
       <pre tabIndex={0} aria-label="Vollständiger vorbereiteter Lernauftrag">{preview}</pre>
     </details>}
     </details>

@@ -237,7 +237,7 @@ export function LearningPagesPage({ modules, initialModule, initialLesson = '', 
   const selection = <div className="learning-page-selector"><Field label="Studienmodul"><select value={moduleId} onChange={event => onOpenModule(event.target.value)}>
     {!moduleId && <option value="">Modul auswählen</option>}
     {moduleId && !knownSummary && <option value={moduleId}>{module?.name || moduleId}</option>}
-    {summaries.data?.map(summary => <option key={summary.module_id} value={summary.module_id}>{summary.module_number} · {summary.module_title}</option>)}
+    {summaries.data?.map(summary => <option key={summary.module_id} value={summary.module_id}>{summary.module_number ? `${summary.module_number} · ` : ''}{summary.module_title}</option>)}
   </select></Field></div>;
   return <div className="learning-pages">
     {initialLesson && !assignmentsActive ? selection : <PageTitle eyebrow="VERSTEHEN UND ÜBEN" title={heading} description={assignmentsActive ? 'Übe die Originalfragen der beiden Einsendearbeiten und lies die Begründung zu jeder Antwort nach.' : 'Lerne die Zusammenhänge des Moduls und prüfe dein Verständnis mit den passenden Aufgaben.'} action={selection} />}

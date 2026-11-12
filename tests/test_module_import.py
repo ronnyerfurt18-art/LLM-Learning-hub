@@ -201,8 +201,34 @@ def test_unclassified_pdfs_are_used_only_when_a_unit_has_nothing_better(tmp_path
             db.execute('INSERT INTO documents(path,module_id,payload) VALUES(?,?,?)', (path, mid, json.dumps(doc)))
     usable, skipped, ignored = plan_sources(hub, mid)
     assert [(item['unit'], Path(item['path']).name, item['kind']) for item in usable] == [
-        (1, '32711-01-lehrbrief.pdf', 'course_material'), (3, 'kapitel-b.pdf', 'other')]
+        (1, '32711-01-lehrbrief.pdf', 'course_material'), (3, 'kapitel-b.pdf', 'other'), (3, 'altklausur.pdf', 'exam')]
     reasons = {Path(item['path']).name: item['reason'] for item in skipped + ignored}
     assert reasons['kapitel-a.pdf'] == 'Nicht verwendet, weil für die Kurseinheit ein Lehrbrief oder Folien vorliegen.'
     assert reasons['folien1.pdf'] == 'Folien nicht verwendet, weil für die Kurseinheit ein Lehrbrief vorliegt.'
-    assert reasons['altklausur.pdf'].startswith('Nach dem Dateinamen keine Lernunterlage')
+    assert 'altklausur.pdf' not in reasons
+
+
+def test_document_kind_can_be_set_by_hand(tmp_path):
+    from backend.module_import import plan_sources
+    source, project, app, mid = _setup(tmp_path)
+    hub = app.state.hub
+    path = '32711 BI/Einheit 2/verwaltung.pdf'
+    doc = {'path': path, 'name': 'verwaltung.pdf', 'title': 'verwaltung', 'extension': '.pdf', 'kind': 'administrative',
+           'unit': 2, 'module_id': mid, 'status': 'pending', 'sha256': 'abc', 'pages': 2,
+           'page_texts': [{'page': 1, 'label': 'Seite 1', 'text': PAGE_ONE}]}
+    with hub.db() as db:
+        did = db.execute('INSERT INTO documents(path,module_id,payload) VALUES(?,?,?)', (path, mid, json.dumps(doc))).lastrowid
+    _, _, ignored = plan_sources(hub, mid)
+    assert path in [item['path'] for item in ignored]
+    client = TestClient(app, base_url='http://127.0.0.1')
+    kinds = client.get('/api/module-import/kinds').json()
+    assert {'kind': 'exam', 'label': 'Altklausur / Klausurfragen', 'prepared': True} in kinds
+    assert client.patch(f'/api/documents/{did}/kind', json={'kind': 'nonsense'}).status_code == 422
+    answer = client.patch(f'/api/documents/{did}/kind', json={'kind': 'exam'}).json()
+    assert answer['kind'] == 'exam' and answer['manual_kind'] == 'exam'
+    usable, _, _ = plan_sources(hub, mid)
+    assert (2, path, 'exam') in [(item['unit'], item['path'], item['kind']) for item in usable]
+    units = client.get(f'/api/module-import/overview?module_id={mid}').json()['units']
+    item = next(d for u in units for d in u['documents'] if d['path'] == path)
+    assert item['usable'] and item['manual_kind'] == 'exam' and item['id'] == did
+    assert client.patch(f'/api/documents/{did}/kind', json={'kind': None}).json()['kind'] == 'administrative'

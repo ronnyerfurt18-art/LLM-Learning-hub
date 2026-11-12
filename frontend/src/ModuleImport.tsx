@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { api, errorText } from './api';
 import { Badge, Button, Empty, ErrorBox, Field, Icon, Loading, Modal, PageTitle, Progress, useLoad } from './components';
 import {
-  AppSettings, BigPictureInfo, ImportDocument, ImportOverview, ImportPreview, ImportPublishResult, ImportStatus,
+  AppSettings, BigPictureInfo, DocumentKind, ImportDocument, ImportOverview, ImportPreview, ImportPublishResult, ImportStatus,
   LearningPagesPackage, LearningPagesSummary, Module, UploadResult,
 } from './types';
 import { unitLabel, unitLabelPlural } from './unitLabel';
+import { ModuleEditor } from './Overview';
+import { RemoveResult, removeText } from './Documents';
 import './module-import.css';
 
 const EXTENSIONS = ['.pdf', '.docx', '.pptx', '.xlsx', '.txt', '.md', '.markdown', '.mp4'];
@@ -65,6 +67,10 @@ export function ModuleImportPage({ modules, moduleId, settings, onSelect, onChan
   onChange: () => void;
 }) {
   const module = modules.find(item => item.id === moduleId);
+  const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [created, setCreated] = useState('');
+  const newModule = <Button className="secondary" onClick={() => { setCreated(''); setCreating(true); }}><Icon name="plus" size={16} /> Neues Modul anlegen</Button>;
   return <>
     <PageTitle
       eyebrow="UNTERLAGEN AUFBEREITEN"
@@ -76,14 +82,30 @@ export function ModuleImportPage({ modules, moduleId, settings, onSelect, onChan
         <section className="card import-step" aria-labelledby="import-module-title">
           <h2 id="import-module-title"><span className="import-number">1</span> Modul wählen</h2>
           {modules.length === 0
-            ? <p className="muted">Es gibt noch keine Module. Lege zuerst unter <a href="#modules">Meine Module</a> ein Modul an.</p>
-            : <Field label="Modul">
-              <select value={moduleId} onChange={event => onSelect(event.target.value)}>
+            ? <p className="muted">Es gibt noch keine Module. Lege hier ein neues Modul an, dann kannst du direkt Unterlagen hochladen.</p>
+            : <Field label="Modul" hint="Für neue Unterlagen ohne bestehendes Modul legst du zuerst ein neues Modul an. Der Ordner für die Uploads entsteht automatisch.">
+              <select value={moduleId} onChange={event => { setCreated(''); onSelect(event.target.value); }}>
                 <option value="">Bitte ein Modul wählen</option>
                 {modules.map(item => <option key={item.id} value={item.id}>{item.number ? `${item.number} ` : ''}{item.name}</option>)}
               </select>
             </Field>}
+          <div className="button-row">{newModule}{module && <Button className="secondary" onClick={() => setEditing(true)}>Modulangaben bearbeiten</Button>}</div>
+          <p className="muted">Name und Kennung kannst du selbst eintragen oder später ändern. Eine Modulnummer ist nicht erforderlich. Nicht erkannte Dokumentzuordnungen lassen sich unter „Dokumente“ ergänzen.</p>
+          {created && <p className="import-live muted" role="status" aria-live="polite">{created}</p>}
         </section>
+        {editing && module && <ModuleEditor module={module} close={() => setEditing(false)} save={() => {
+          setEditing(false);
+          setCreated('Modulangaben gespeichert. Bestehende Lernseiten bleiben zugeordnet.');
+          onChange();
+        }} />}
+        {creating && <ModuleEditor module={null} close={() => setCreating(false)} save={saved => {
+          setCreating(false);
+          onChange();
+          if (saved) {
+            setCreated(`Modul „${saved.name}“ ist angelegt und ausgewählt. Lade jetzt in Schritt 2 die Unterlagen hoch.`);
+            onSelect(saved.id);
+          }
+        }} />}
         {module
           ? <Workspace key={module.id} module={module} settings={settings} onChange={onChange} />
           : modules.length > 0 && <Empty icon="file" title="Noch kein Modul gewählt">Wähle oben ein Modul, dann siehst du seine Unterlagen und Einheiten.</Empty>}
@@ -93,7 +115,7 @@ export function ModuleImportPage({ modules, moduleId, settings, onSelect, onChan
 
 function Workspace({ module, settings, onChange }: { module: Module; settings: AppSettings; onChange: () => void }) {
   const labels: Labels = { one: unitLabel(module), many: unitLabelPlural(module) };
-  const overview = useLoad(() => api<ImportOverview>(`/module-import/overview?module_id=${enc(module.id)}`), [module.id]);
+  const overview = useLoad(() => api<ImportOverview>(`/module-import/overview?module_id=${enc(module.id)}`), [module.id, module.name, module.number]);
   const reloadRef = useRef(overview.reload);
   reloadRef.current = overview.reload;
   const [selected, setSelected] = useState<number[]>([]);
@@ -196,15 +218,74 @@ function uploadText(row: UploadRow, labels: Labels) {
   return `Fertig. ${labels.one} ${row.unit}.`;
 }
 
-function DocumentList({ documents }: { documents: ImportDocument[] }) {
+function DocumentList({ documents, kinds, onKindChanged }: {
+  documents: ImportDocument[]; kinds?: DocumentKind[]; onKindChanged?: () => void;
+}) {
+  const [saving, setSaving] = useState<number | null>(null);
+  const [error, setError] = useState('');
+  const [removing, setRemoving] = useState<ImportDocument | null>(null);
+  const [notice, setNotice] = useState('');
   if (!documents.length) return <p className="muted import-none">Noch keine Unterlagen.</p>;
-  return <ul className="import-documents">
-    {documents.map(document => <li key={document.path}>
-      <span className="import-document-name">{document.name}</span>
-      {document.pages > 0 && <span className="muted"> · {document.pages} S.</span>}
-      {!document.usable && document.reason && <span className="import-reason">Nicht verwertbar: {document.reason}</span>}
-    </li>)}
-  </ul>;
+  const remove = async () => {
+    if (!removing) return;
+    setSaving(removing.id);
+    setError('');
+    try {
+      const result = await api<RemoveResult>(`/documents/${removing.id}`, undefined, 'DELETE');
+      setNotice(removeText(result));
+      setRemoving(null);
+      onKindChanged?.();
+    } catch (problem) {
+      setError(errorText(problem));
+    } finally {
+      setSaving(null);
+    }
+  };
+  const change = async (document: ImportDocument, kind: string) => {
+    setSaving(document.id);
+    setError('');
+    try {
+      await api(`/documents/${document.id}/kind`, { kind: kind === '__auto__' ? null : kind }, 'PATCH');
+      onKindChanged?.();
+    } catch (problem) {
+      setError(errorText(problem));
+    } finally {
+      setSaving(null);
+    }
+  };
+  return <>
+    {error && <ErrorBox error={error} />}
+    <ul className="import-documents">
+      {documents.map(document => <li key={document.path}>
+        <span className="import-document-name">{document.name}</span>
+        {document.pages > 0 && <span className="muted"> · {document.pages} S.</span>}
+        {kinds && kinds.length > 0 && <label className="import-kind">
+          <span className="muted">Art:</span>
+          <select value={document.manual_kind || document.kind} disabled={saving === document.id}
+            aria-label={`Art der Unterlage ${document.name}`} onChange={event => change(document, event.target.value)}>
+            {!kinds.some(item => item.kind === document.kind) && <option value={document.kind}>{document.kind}</option>}
+            {kinds.map(item => <option key={item.kind} value={item.kind}>{item.label}{item.prepared ? '' : ' (wird nicht aufbereitet)'}</option>)}
+            {document.manual_kind && <option value="__auto__">Automatisch erkennen lassen</option>}
+          </select>
+          {document.manual_kind ? <Badge>Von Hand gewählt</Badge> : <span className="muted">automatisch erkannt</span>}
+        </label>}
+        {document.usable ? <span className="import-ok"> Wird aufbereitet</span>
+          : document.reason && <span className="import-reason">Nicht verwertbar: {document.reason}</span>}
+        {onKindChanged && <button type="button" className="text-button import-remove" disabled={saving === document.id}
+          onClick={() => { setNotice(''); setRemoving(document); }}>Entfernen</button>}
+      </li>)}
+    </ul>
+    {notice && <p className="import-live muted" role="status" aria-live="polite">{notice}</p>}
+    {removing && <Modal title="Datei entfernen?" onClose={() => setRemoving(null)}>
+      <p>„{removing.name}“ wird aus dem Studienordner in den Papierkorb des Hubs verschoben (<code>data/papierkorb/…</code>) und aus der Liste genommen. Nichts wird endgültig gelöscht: Datei zurückschieben und unter „Dokumente“ den Ordner durchsuchen holt sie wieder herein.</p>
+      <p className="muted">Bereits übernommene Fragen und veröffentlichte Lernseiten bleiben erhalten.</p>
+      {error && <ErrorBox error={error} />}
+      <div className="button-row">
+        <Button onClick={remove} disabled={saving === removing.id}>{saving === removing.id ? 'Wird verschoben …' : 'In den Papierkorb'}</Button>
+        <Button className="secondary" onClick={() => setRemoving(null)}>Abbrechen</Button>
+      </div>
+    </Modal>}
+  </>;
 }
 
 function UnitsSection({ labels, overview, selected, onSelect }: {
@@ -214,6 +295,7 @@ function UnitsSection({ labels, overview, selected, onSelect }: {
   onSelect: (units: number[]) => void;
 }) {
   const { data, error, loading, reload } = overview;
+  const kinds = useLoad(() => api<DocumentKind[]>('/module-import/kinds'), []);
   const choosable = data ? data.units.filter(item => item.published_lessons === 0 && item.documents.length > 0).map(item => item.unit) : [];
   const toggle = (unit: number) => onSelect(selected.includes(unit) ? selected.filter(item => item !== unit) : [...selected, unit].sort((a, b) => a - b));
   return <section className="card import-step" aria-labelledby="import-units-title">
@@ -244,7 +326,7 @@ function UnitsSection({ labels, overview, selected, onSelect }: {
                 {published && <span className="muted"> {item.published_lessons} {item.published_lessons === 1 ? 'Lernseite' : 'Lernseiten'}, nicht mehr auswählbar</span>}
                 {!published && item.draft_lessons > 0 && <span className="muted"> {item.draft_lessons} {item.draft_lessons === 1 ? 'Lernseite' : 'Lernseiten'} im Entwurf</span>}
               </span>
-              <DocumentList documents={item.documents} />
+              <DocumentList documents={item.documents} kinds={kinds.data || []} onKindChanged={reload} />
             </div>
           </li>;
         })}
@@ -252,7 +334,7 @@ function UnitsSection({ labels, overview, selected, onSelect }: {
       {data.unassigned_documents.length > 0 && <div className="alert warning import-unassigned">
         <strong>Ohne {labels.one}</strong>
         <span>Diese Dateien werden nicht aufbereitet. Ordne sie unter <a href="#documents">Dokumente</a> einer {labels.one} zu.</span>
-        <DocumentList documents={data.unassigned_documents} />
+        <DocumentList documents={data.unassigned_documents} kinds={kinds.data || []} onKindChanged={reload} />
       </div>}
     </>}
   </section>;
@@ -378,7 +460,7 @@ function ProcessSection({ module, labels, overview, selected, tutorBlock, pictur
     {lock && <div className="alert warning" role="alert"><strong>Das KI-Modell ist nicht bereit.</strong><span>{lock}</span></div>}
     {otherRunning && <div className="alert info" role="status">Für das Modul „{status?.module_name || status?.module_id}“ läuft gerade eine Aufbereitung. Warte, bis sie fertig ist.</div>}
     {error && <ErrorBox error={error} />}
-    {selected.length === 0 && !runningHere && <p className="muted">Wähle oben mindestens eine {labels.one}, dann kannst du eine Vorschau ansehen.</p>}
+    {selected.length === 0 && !runningHere && <p className="muted">Wähle oben mindestens einen Eintrag, dann kannst du eine Vorschau ansehen.</p>}
     <div className="button-row">
       <Button className="secondary" onClick={showPreview} disabled={selected.length === 0 || previewing || running}>
         <Icon name="search" size={16} /> {previewing ? 'Vorschau wird geladen …' : 'Vorschau'}
@@ -416,12 +498,13 @@ function ProcessSection({ module, labels, overview, selected, tutorBlock, pictur
         {mine.messages.map((message, index) => <li key={index}>{message}</li>)}
       </ol>
     </div>}
-    {finished && <ImportResult status={finished} />}
+    {finished && <ImportResult status={{ ...finished, outputs: finished.outputs ? { ...finished.outputs, draft_errors: overview.draft_errors ?? finished.outputs.draft_errors } : finished.outputs }} />}
     {!runningHere && unpublishedDrafts.length > 0 && <div className="import-publish">
       <h3>Lernseiten veröffentlichen</h3>
+      {!!overview.draft_errors?.length && <div className="alert warning"><strong>Bitte den Entwurf zuerst korrigieren.</strong><ul>{overview.draft_errors.map((message, index) => <li key={index}>{message}</li>)}</ul></div>}
       <p>Der Entwurf enthält Lernseiten für {unpublishedDrafts.length === 1 ? labels.one : labels.many} {list(unpublishedDrafts)}. Erst nach dem Veröffentlichen erscheinen sie im Bereich Lernpages.</p>
       <div className="button-row">
-        <Button onClick={publish} disabled={publishing || running}><Icon name="check" size={16} /> {publishing ? 'Wird veröffentlicht …' : 'Lernseiten veröffentlichen'}</Button>
+        <Button onClick={publish} disabled={publishing || running || !!overview.draft_errors?.length}><Icon name="check" size={16} /> {publishing ? 'Wird veröffentlicht …' : 'Lernseiten veröffentlichen'}</Button>
         <a className="button secondary" href={`#documents`}>Fragen unter Dokumente prüfen</a>
       </div>
     </div>}
@@ -437,8 +520,9 @@ function ProcessSection({ module, labels, overview, selected, tutorBlock, pictur
 function ImportResult({ status }: { status: ImportStatus }) {
   const counts = status.counts;
   const outputs = status.outputs;
-  const headline = status.state === 'done' ? 'Fertig' : status.state === 'cancelled' ? 'Abgebrochen' : 'Fehlgeschlagen';
-  const tone = status.state === 'done' ? 'success' : status.state === 'cancelled' ? 'info' : 'error';
+  const needsCorrection = !!outputs?.draft_errors?.length;
+  const headline = status.state === 'done' ? (needsCorrection ? 'Entwurf – Korrektur erforderlich' : 'Entwurf erstellt') : status.state === 'cancelled' ? 'Abgebrochen' : 'Fehlgeschlagen';
+  const tone = status.state === 'done' ? (needsCorrection ? 'warning' : 'success') : status.state === 'cancelled' ? 'info' : 'error';
   return <div className={`alert ${tone} import-result`} role="status">
     <strong>{headline}</strong>
     {outputs && <dl className="import-counts">

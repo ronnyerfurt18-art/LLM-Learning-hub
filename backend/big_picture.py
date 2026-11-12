@@ -15,7 +15,7 @@ from pathlib import Path
 
 from fastapi import HTTPException
 
-from .content_files import PACKAGE_LOCK, backup_file, find_package, module_number, write_json
+from .content_files import PACKAGE_LOCK, backup_file, find_package, draft_file, write_json
 from .learning_pages import BIG_PICTURE_NODES, validate_learning_page
 from .local_generation import ollama_generator
 from .local_model import local_json
@@ -79,10 +79,7 @@ def _slug(value):
 
 
 def draft_path(project, module):
-    number = module_number(module)
-    if not number:
-        raise ValueError('Das Modul hat keine Modulnummer; das Big Picture wird über die Modulnummer zugeordnet.')
-    return Path(project) / 'imports' / DRAFTS / f'{number}-big-picture.json'
+    return draft_file(project, module, 'big-picture')
 
 
 def published_lessons(package):
@@ -204,7 +201,7 @@ class BigPicture:
 
     def lessons_of(self, module):
         """Published package and its lessons; the big picture needs at least one."""
-        _, package = find_package(self.project, module_number(module))
+        _, package = find_package(self.project, module)
         lessons = published_lessons(package)
         if not lessons:
             raise ValueError(NO_LESSONS)
@@ -270,6 +267,7 @@ class BigPicture:
             path.parent.mkdir(parents=True, exist_ok=True)
             if path.is_file():
                 backup_file(path, self.data)
+            block['module_id'] = module['id']
             write_json(path, block)
             self._update(state='done', finished_at=_now(),
                          message=f"Entwurf erstellt: {len(block['nodes'])} Bausteine, {len(block['connections'])} Zusammenhänge. "
@@ -285,7 +283,7 @@ class BigPicture:
         if state.get('module_id') != module_id:
             state = {'state': 'idle', 'message': ''}
         try:
-            _, package = find_package(self.project, module_number(module))
+            _, package = find_package(self.project, module)
         except ValueError:
             package = None
         picture = package['overview'].get('big_picture') if isinstance(package, dict) and isinstance(package.get('overview'), dict) else None
@@ -307,7 +305,7 @@ class BigPicture:
         if draft is None:
             raise KeyError('Für dieses Modul liegt kein Big-Picture-Entwurf vor.')
         with PACKAGE_LOCK:
-            target, package = find_package(self.project, module_number(module))
+            target, package = find_package(self.project, module)
             if target is None or not isinstance(package.get('overview'), dict):
                 raise ValueError(NO_LESSONS)
             exists = package['overview'].get('big_picture') is not None

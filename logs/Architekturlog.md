@@ -15,7 +15,7 @@ Der Hub arbeitet mit zwei Strängen, die sich gegenseitig einrahmen.
 
 | Funktion | Strang A – fester Hub | Strang B – lokales Modell |
 |---|---|---|
-| Quellen erfassen | Studienordner durchsuchen, Dateiart und Kurseinheit erkennen, Seitentexte auslesen (`documents.py`) | – |
+| Quellen erfassen | Studienordner durchsuchen, Dateiart und Kurseinheit erkennen, Seitentexte auslesen (`documents.py`); Scans ohne Textebene lokal erkennen (`ocr.py`) | – |
 | Üben und Wiederholen | Fragenbank, Auswertung von Auswahl, Zuordnung und Lücken, Wiederholungsplanung nach SM‑2, Klausurmodus (`core.py`, `practice.py`) | – |
 | Lernseiten | Laden und vollständige Prüfung der Inhaltsdateien samt Quellen und Seitengrenzen (`learning_pages.py`) | Entwurf neuer Lernseiten im Modul-Import |
 | Einsendearbeiten üben | Aufgaben, hergeleitete Lösungen, Punktestaffel (`assignments.py`, Browser) | – |
@@ -26,7 +26,7 @@ Der Hub arbeitet mit zwei Strängen, die sich gegenseitig einrahmen.
 | Lernwiki | Speichern, Versionieren, Status „ungeprüft/geprüft“ (`lernwiki.py`) | Musterlösung auf ausdrücklichen Wunsch erzeugen |
 | Modul-Import | Quellen wählen, in Abschnitte teilen, Zitate in den Seiten wiederfinden, Formate prüfen, Zwischenspeicher (`module_import.py`) | Lernseiten und Übungsfragen je Abschnitt entwerfen |
 | Qualitätsprüfung | Feste Regeln nach jeder Antwort, Protokoll der Befunde (`quality.py`) | Zweiter Blick auf eine Antwort auf Knopfdruck |
-| Entwicklung | Anforderungen speichern, Dateiindex des Programms bilden, genannte Dateien belegen, Tests ergänzen, Weg einstufen, Übergabe-Prompt schreiben (`development.py`) | Auftrag aus einer Anforderung ausarbeiten: Ziel, Dateien, Schritte, Abnahmekriterien, Risiken, Fragen, Größe |
+| Entwicklung | Anforderungen speichern, Dateiindex des Programms bilden, genannte Dateien belegen, Tests ergänzen, Weg einstufen, Übergabe-Prompt schreiben (`development.py`); für lokal machbare Aufträge Dateien auswählen, Ersetzungen prüfen, nach deiner Freigabe sichern und schreiben (`development_change.py`) | Auftrag aus einer Anforderung ausarbeiten: Ziel, Dateien, Schritte, Abnahmekriterien, Risiken, Fragen, Größe; für lokal machbare Aufträge einzelne Ersetzungen vorschlagen |
 | Sprache | Aufnahme begrenzen, Dateien nur vorübergehend halten (`voice.py`) | Eigene lokale Sprachmodelle für Erkennen und Vorlesen (nicht das Tutor-Modell) |
 
 ### Wie die Stränge ineinandergreifen
@@ -54,10 +54,10 @@ Nachricht ──► [A] erkennen ──► [A] Kontext + Regeln ──► [B] An
 
 | Übergang | Lernchat | KI-Planer | Modul-Import | Entwicklung |
 |---|---|---|---|---|
-| Einrahmen | `build_tutor_context`, `build_assignment_context` | Fakten aus `_snapshot`, `_assignment_facts` | `window_messages` mit Seitenausschnitt und JSON-Schema | `messages_for` mit Dateiindex, Architekturauszug und JSON-Schema |
-| Prüfen | `check_tutor`, Quellenmarker in `_finish` | `check_plan` | `locate_quote`, `validate_import`, `validate_learning_page` | `build_order`, `decide_route` |
-| Verbuchen | geöffnete Fragen (`tutor:assignments`), Befunde (`quality:log`) | Befunde (`quality:log`) | Importdatei in `imports/`, Entwurf in `imports/entwuerfe/` | Anforderung mit Auftrag (`development:requests`) |
-| Freigabe durch dich | Selbsteinschätzung im Lernprotokoll | Termine selbst eintragen | Import bestätigen, Entwurf veröffentlichen | Einstufung umstellen, Prompt selbst kopieren |
+| Einrahmen | `build_tutor_context`, `build_assignment_context` | Fakten aus `_snapshot`, `_assignment_facts` | `window_messages` mit Seitenausschnitt und JSON-Schema | `messages_for` mit Dateiindex, Architekturauszug und JSON-Schema; `change_messages` mit dem Inhalt der genannten Dateien |
+| Prüfen | `check_tutor`, Quellenmarker in `_finish` | `check_plan` | `locate_quote`, `validate_import`, `validate_learning_page` | `build_order`, `decide_route`; `check_edits` |
+| Verbuchen | geöffnete Fragen (`tutor:assignments`), Befunde (`quality:log`) | Befunde (`quality:log`) | Importdatei in `imports/`, Entwurf in `imports/entwuerfe/` | Anforderung mit Auftrag und Vorschlag (`development:requests`); nach Freigabe Programmdateien, Sicherung in `data/backups/development/` |
+| Freigabe durch dich | Selbsteinschätzung im Lernprotokoll | Termine selbst eintragen | Import bestätigen, Entwurf veröffentlichen | Einstufung umstellen, Prompt selbst kopieren; Vorschlag übernehmen, verwerfen oder zurücknehmen |
 
 ## 2. Grundsätze
 
@@ -80,7 +80,7 @@ FastAPI-Server (backend/main.py) ── Sperren, Zugriff nur lokal
    │                 search, practice, learning_memory, quality
    ├─ Modellgrenze:  tutor (ein Dienst für alle Modellaufrufe), local_model, bonsai
    └─ Mischformen:   planner, tutor_context, tutor_assignments, lernwiki, module_import,
-                     big_picture, development
+                     big_picture, development, development_change
 SQLite (data/learning.sqlite3)     Inhaltsdateien (content/, imports/)     Studienordner (nur lesend)
 ```
 
@@ -90,6 +90,8 @@ SQLite (data/learning.sqlite3)     Inhaltsdateien (content/, imports/)     Studi
 | `content/` | geprüfte Lernseiten, Einsendearbeiten, Lernziele | du bzw. beauftragte Aufbereitung; der Modul-Import nur beim ausdrücklichen Veröffentlichen |
 | `imports/` | Frageimporte (warten auf Bestätigung), `entwuerfe/` für Lernseiten | Aufbereitung und Modul-Import |
 | `data/module-import/` | Zwischenspeicher fertiger Modellantworten | Modul-Import |
+| `data/backups/development/` | Stand der Programmdateien vor einer im Hub übernommenen Änderung | Entwicklung, beim Übernehmen |
+| `backend/`, `frontend/src/`, `tools/`, `tests/`, `docs/` | Programm und Anleitungen | du bzw. eine beauftragte KI; der Hub nur beim Übernehmen eines freigegebenen Vorschlags |
 | Studienordner | Originalunterlagen | niemand im Hub; nur Lesezugriff |
 
 ## 4. Entscheidungen
@@ -125,7 +127,7 @@ SQLite (data/learning.sqlite3)     Inhaltsdateien (content/, imports/)     Studi
 
 ### 11.11.2026 – Der Hub schreibt erstmals in den Studienordner
 **Anlass:** Unterlagen sollen sich über die Homepage hochladen lassen.
-**Entscheidung:** `POST /api/documents/upload` legt Dateien im Modulordner ab, mit gewählter Einheit im Unterordner `Einheit <n>`. Der Hub überschreibt dort nie etwas, legt nichts außerhalb des Studienordners oder im Programmordner ab und löscht dort nichts. Alles andere im Studienordner liest er weiterhin nur.
+**Entscheidung:** `POST /api/documents/upload` legt Dateien im Modulordner ab, mit gewählter Einheit im Unterordner `Einheit <n>`. Der Hub überschreibt dort nie etwas, legt nichts außerhalb des Studienordners oder im Programmordner ab und löscht dort nichts (Entfernen verschiebt in den Papierkorb, siehe unten). Alles andere im Studienordner liest er weiterhin nur.
 **Offen:** Die Einheit bestimmt weiterhin die Dokumentenerkennung; eine Nummer im Dateinamen hat Vorrang vor dem Ordner. Die Antwort des Uploads nennt deshalb die erkannte und die gewählte Einheit.
 
 ### 11.11.2026 – Big Picture als eigener Baustein
@@ -144,10 +146,57 @@ SQLite (data/learning.sqlite3)     Inhaltsdateien (content/, imports/)     Studi
 **Begründung:** Ein lokales KI-Modell mit 27 Milliarden Parametern schärft eine Anforderung brauchbar, ändert Code über mehrere Dateien aber unzuverlässig. Ein fester Prompt bleibt nachvollziehbar und enthält nichts, was der Hub nicht selbst hineingelegt hat.
 **Offen:** Umsetzung kleiner Änderungen durch das lokale KI-Modell auf einem Git-Branch mit Freigabe und Testlauf. Sie setzt voraus, dass der Programmordner ein Git-Repository ist und nicht in einem Cloud-Ordner liegt.
 
+### 11.11.2026 – Entwicklung: kleine Aufträge setzt das lokale Modell um, der Hub schreibt nach Freigabe
+**Anlass:** „Lokal machbar“ war nur eine Einstufung. Kleine Änderungen wie ein Farbwert sollen im Hub selbst umgesetzt werden können.
+**Entscheidung:** `backend/development_change.py` ergänzt den Baustein `development`. Für einen Auftrag mit der Einstufung „lokal machbar“ liest der Hub die genannten Dateien (höchstens zwei Programmdateien, nur aus dem Dateiindex, keine neuen) und gibt ihren Inhalt an das lokale KI-Modell, ganz oder in Ausschnitten, wenn sie nicht ins Kontextfenster passen. Das KI-Modell liefert einzelne Ersetzungen (Datei, bisheriger Text, neuer Text), nie ganze Dateien. Der Hub übernimmt eine Ersetzung nur, wenn die Datei zum Auftrag gehört und der bisherige Text dort genau einmal vorkommt; Python muss danach noch gültig sein. Geschrieben wird erst nach deinem Klick auf „Übernehmen“: Sicherung nach `data/backups/development/`, Schreiben über eine temporäre Datei, Eintrag im Änderungslog, Status „Umgesetzt“. „Zurücknehmen“ stellt die Sicherung bytegenau wieder her, solange die Datei seither nicht weiter geändert wurde.
+**Begründung:** Damit ändert sich die Entscheidung vom selben Tag in zwei Punkten: Das KI-Modell sieht jetzt Quelltext, und der Baustein ändert Programmcode. Beides bleibt innerhalb der Grundsätze 1 und 2, weil der Hub die Dateien auswählt und nur nach Bestätigung schreibt. Ersetzungen statt ganzer Dateien, weil `styles.css` und `App.tsx` aus wenigen sehr langen Zeilen bestehen und ein Modell dieser Größe lange Dateien nicht fehlerfrei wiedergibt. Sicherungsordner statt Git-Branch, weil der Programmordner im iCloud-Ordner liegt und kein Git-Repository ist.
+**Offen:** Tests und der Bau der Oberfläche laufen nach dem Übernehmen nicht aus dem Hub heraus (Stufe 2). Ob ein echtes KI-Modell den bisherigen Text in langen Zeilen zeichengenau trifft, ist nicht gemessen; eine zweite Runde mit den Ablehnungsgründen gibt es nicht.
+
+### 11.11.2026 – Entwicklung: Stand und Verlauf statt bloßem Status
+
+**Entscheidung:** Der Status einer Anforderung („Umgesetzt“) sagt nichts darüber, ob die Änderung im laufenden Hub ankommt. Deshalb berechnet der Server zusätzlich einen **Stand** (`outcome`) aus dem gespeicherten Zustand und aus zwei Dateizeiten: `frontend/dist/index.html` gegen den Zeitpunkt der Übernahme, und der Start des Hubs gegen denselben Zeitpunkt. Der Stand wird bei jedem Abruf neu berechnet, nicht gespeichert; so kann er nicht veralten.
+
+**Verlauf:** Jede Anforderung führt eine angehängte Liste (`history`, höchstens 100 Einträge). Ältere Anforderungen erhalten beim ersten Anzeigen die Ereignisse, die ihre Zeitstempel hergeben (`legacy_history`).
+
+**Warum so:** Der Hub kann nicht sehen, ob du die Seite neu geladen hast; er kann aber belegen, ob ein Neubau oder Neustart nach der Übernahme stattfand. Das ist die ehrliche Grenze der Prüfung und steht so in der Oberfläche.
+
+**Folgen:** Betroffen sind `backend/development.py`, `backend/development_change.py`, `Development.tsx`, `development.css`, `types.ts`. Neue Tests in `tests/test_development_status.py`.
+
+### 11.11.2026 – Entwicklung als Chat mit Urteil „erledigt / nicht erledigt“
+
+**Entscheidung:** Formular und Listen reichten nicht, weil man nach dem Abschicken nicht sah, wo die Aufgabe steht. Der Bereich bekommt ein Chat-Fenster (`DevChat.tsx`, auf jeder Seite), das denselben Zustand zeigt wie die Seite „Entwicklung“, nur als Gespräch. Eine Aufgabe läuft als **ein** Hintergrundlauf (`kind='flow'`): Auftrag, Einstufung, bei „lokal“ der Vorschlag. Die Freigabe bleibt bei der Person.
+
+**Prüfung:** Nach der Übernahme startet ein weiterer Lauf (`kind='verify'`), der ausschließlich feste Befehle ausführt (Bau der Oberfläche, Tests der betroffenen Python-Dateien). Das Ergebnis liegt am Vorschlag (`proposal.verify`) und fließt in den Stand ein: ein Fehlschlag macht aus „Übernommen“ ein rotes „Prüfung fehlgeschlagen“. Was der Hub nicht selbst tun kann (Neustart nach Servercode-Änderung), bleibt als ✗ stehen; „erledigt“ gibt es erst, wenn kein Punkt offen ist.
+
+**Warum feste Befehle:** Das KI-Modell liefert nur Textersetzungen. Ein vom Modell gewählter Befehl würde den Schutz der Freigabe aushebeln.
+
+**Folgen:** `backend/development_flow.py` neu, `tests/test_development_flow.py` neu; die Seite „Entwicklung“ bleibt für Verlauf und Handarbeit.
+
+### 11.11.2026 – Texterkennung (OCR) als fester Baustein vor dem Modell
+
+**Entscheidung:** PDFs ohne Textebene (Scans, Fotos) liest der feste Hub selbst: `ocr.py` rendert die Seite mit `pypdfium2` und erkennt den Text lokal mit RapidOCR (ONNX-Modelle im Paket, keine Downloads, nichts verlässt den Rechner). Erkannte Seiten tragen die Markierung `ocr`; Dokumente zeigen die Zahl der erkannten Seiten.
+
+**Warum Strang A:** Texterkennung ist deterministisch und gehört zum Erfassen der Quellen, nicht zum Formulieren. Das Modell bekommt den erkannten Text wie jeden anderen Seitentext über denselben Übergang „Einrahmen“; es sieht nie das Bild.
+
+**Folgen:** `requirements.txt` um `rapidocr` und `onnxruntime` erweitert (Python 3.9 bekommt ältere, passende Versionen). Fehlt das Paket, meldet der Index weiterhin einen klaren Fehler statt stillzuschweigen.
+
+### 11.11.2026 – Entfernen verschiebt in den Papierkorb, löscht nie
+
+**Anlass:** Eine falsch oder unlesbar hochgeladene Datei blieb als Leiche in der Dokumentenliste.
+
+**Entscheidung:** `DELETE /api/documents/{id}` (`document_trash.py`) verschiebt die Datei aus dem Studienordner nach `<Datenordner>/papierkorb/<Zeitstempel>/<Pfad>` und entfernt den Indexeintrag. Der Hub löscht damit weiterhin nichts endgültig; der Rückweg ist „Datei zurückschieben, Ordner durchsuchen“. Bereits übernommene Fragen und veröffentlichte Lernseiten bleiben unberührt, ein leer gewordener Ordner `Einheit <n>` aus dem Upload wird mit entfernt.
+
+### 11.11.2026 – „KI fragen“: die Seite meldet, was sie zeigt
+**Anlass:** Kurze Rückfragen sollen auf jeder Seite möglich sein, ohne in den Lernchat zu wechseln.
+**Entscheidung:** Ein Fenster für alle Seiten (`AskAi.tsx`), keine eigene Logik je Seite. Eine Seite meldet über `pageContext.ts` Titel und Text dessen, was gerade sichtbar ist; ohne Meldung gelten Seitentitel und gewähltes Modul. Der Server (`backend/quick_chat.py`) setzt diese Angaben als Daten vor den kompakten Studienkontext des Moduls und ergänzt feste Regeln für kurze Antworten. Die Trainingsfrage meldet die Musterantwort erst nach dem Aufdecken. Kein eigener Schalter in `features`: das Fenster gehört zum Lernbegleiter und nutzt dessen Modell und Sperre.
+**Folge:** Läuft gerade eine Antwort im Lernchat, meldet „KI fragen“, dass der Lernbegleiter beschäftigt ist (und umgekehrt). Das Gespräch im Fenster wird nicht gespeichert und geht beim Neuladen verloren.
+**Offen:** Weitere Seiten (Lernseiten-Abschnitt, Klausurtraining) melden noch keinen eigenen Inhalt.
+
 ## 5. Bekannte Lücken
 
 - Aufbereitung, Big Picture und die Aufträge im Abzweig „Entwicklung“ sind nur mit einem Platzhalter statt eines echten KI-Modells geprüft.
 - Im Abzweig „Entwicklung“ rät das KI-Modell die betroffenen Dateien aus Namen und Kurzbeschreibungen; der Hub prüft nur, ob es sie gibt, nicht ob sie die richtigen sind.
+- Die lokale Umsetzung im Abzweig „Entwicklung“ ist nur mit einem Platzhalter statt eines echten KI-Modells geprüft. Der Hub prüft, dass eine Ersetzung genau eine Stelle trifft, nicht, ob sie fachlich richtig ist; bei Oberfläche und Styles gibt es nur eine Warnung zur Klammerzahl.
 - Die Übersicht je Einheit liest bei jedem Aufruf die Seitentexte aller Lehrbriefe; bei großen Modulen ist das langsam.
 - Hochgeladene Videos (`.mp4`) werden gespeichert, erscheinen aber nicht unter „Dokumente“.
 - Die Qualitätsprüfung deckt normale Lernseiten-Gespräche nur mit zwei Regeln ab; für den Planer gibt es keine Modellprüfung.

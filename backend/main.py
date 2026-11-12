@@ -22,17 +22,22 @@ from pypdf.errors import PyPdfError
 from starlette.background import BackgroundTask
 
 from .ai import DisabledProvider
+from .content_files import PACKAGE_LOCK, backup_file, cited_source_paths, find_package, write_json
+from .document_trash import register_document_trash_routes
 from .core import Hub, iso, norm, validate_import
 from .documents import generate_proposals, scan_documents
 from .planning import register_planning_routes
 from .planner import register_planner_routes
 from .big_picture import register_big_picture_routes
 from .development import register_development_routes
+from .development_change import register_development_change_routes
+from .development_flow import register_development_flow_routes
 from .module_import import register_module_import_routes
 from .upload import register_upload_routes
 from .quality import register_quality_routes
 from .learning_memory import register_memory_routes
 from .tutor import register_tutor_routes
+from .quick_chat import register_quick_chat_routes
 from .voice import register_voice_routes
 from .lernwiki import register_wiki_routes
 from .search import register_search_routes
@@ -102,6 +107,8 @@ def create_app(source_root=None, data_dir=None, project_root=None, start_watch=T
             for doc in found:
                 if doc['status'] == 'unchanged':
                     continue
+                if previous.get(doc['path'], {}).get('manual_kind'):
+                    doc['manual_kind'] = previous[doc['path']]['manual_kind']  # A kind chosen by hand survives re-reading.
                 manual = previous.get(doc['path'], {}).get('manual_assignment')
                 if manual:
                     m = hub.module(manual['module_id'])
@@ -342,9 +349,9 @@ def create_app(source_root=None, data_dir=None, project_root=None, start_watch=T
         for package in packages:
             module_id = module_id_for_package(package, existing)
             if not module_id:
-                errors.append({'file': package['module_number'], 'errors': ['Kein eindeutig zugeordnetes Modul für dieses Lernpaket vorhanden.']})
+                errors.append({'file': package.get('module_number') or '', 'errors': ['Kein eindeutig zugeordnetes Modul für dieses Lernpaket vorhanden.']})
                 continue
-            summary = {'module_id': module_id, 'module_number': package['module_number'],
+            summary = {'module_id': module_id, 'module_number': package.get('module_number') or '',
                        'module_title': package['module_title'], 'lesson_count': len(package['lessons'])}
             if package['overview'].get('big_picture'):
                 summary['has_big_picture'] = True
@@ -358,7 +365,7 @@ def create_app(source_root=None, data_dir=None, project_root=None, start_watch=T
         hub.module(module_id)
         packages, errors = load_learning_pages(project, source)
         existing = hub.modules()
-        matching_errors = [error for error in errors if error.get('module_number') and module_id_for_package(error, existing) == module_id]
+        matching_errors = [error for error in errors if module_id_for_package(error, existing) == module_id]
         if matching_errors:
             learning_page_errors(matching_errors)
         package = next((package for package in packages if module_id_for_package(package, existing) == module_id), None)
@@ -366,7 +373,7 @@ def create_app(source_root=None, data_dir=None, project_root=None, start_watch=T
             module = hub.module(module_id)
             return {**package, 'module_id': module_id, 'unit_label': module['unit_label'],
                     'has_assignments': (module.get('number') or '') in assignment_module_numbers(project)}
-        unassigned_errors = [error for error in errors if not error.get('module_number')]
+        unassigned_errors = [error for error in errors if not error.get('module_number') and not error.get('module_id')]
         if unassigned_errors:
             learning_page_errors(unassigned_errors)
         raise HTTPException(404, 'Für dieses Modul ist noch keine Lernpage vorhanden.')
@@ -411,8 +418,29 @@ def create_app(source_root=None, data_dir=None, project_root=None, start_watch=T
     def patch_module(mid: str, value: dict):
         if 'directory' in value:
             value['directory'] = safe_directory(value['directory'])
-        with lock:
+        # Bind older files before changing their visible metadata, so later edits never orphan content.
+        with lock, PACKAGE_LOCK:
+            old = hub.module(mid)
+            from .module_import import draft_path as lesson_draft_path
+            from .big_picture import draft_path as picture_draft_path
+            published, _ = find_package(project, old)
+            paths = [path for path in (published, lesson_draft_path(project, old), picture_draft_path(project, old))
+                     if path is not None and path.is_file()]
+            artifacts = []
+            for path in paths:
+                try:
+                    content = json.loads(path.read_text(encoding='utf-8'))
+                except (ValueError, OSError):
+                    continue
+                if isinstance(content, dict):
+                    artifacts.append((path, content))
             result = hub.patch_module(mid, value)
+            for path, content in artifacts:
+                content['module_id'] = mid
+                if 'lessons' in content:
+                    content.update(module_number=result.get('number') or '', module_title=result['name'])
+                backup_file(path, data)
+                write_json(path, content)
         if 'directory' in value and result.get('directory'):
             with hub.db() as db:
                 for r in db.execute('SELECT * FROM documents').fetchall():
@@ -473,7 +501,8 @@ def create_app(source_root=None, data_dir=None, project_root=None, start_watch=T
 
     @app.get('/api/documents')
     def documents():
-        return hub.documents()
+        cited = cited_source_paths(project)  # Which files already became published learning pages.
+        return [{**row, 'in_learning_pages': row['path'] in cited} for row in hub.documents()]
 
     @app.post('/api/scan')
     def scan_now(value: dict):
@@ -590,9 +619,11 @@ def create_app(source_root=None, data_dir=None, project_root=None, start_watch=T
             db.backup(target)
         return FileResponse(filename, filename='master-learning-hub-backup.sqlite3', media_type='application/vnd.sqlite3', background=BackgroundTask(Path(filename).unlink, missing_ok=True))
 
+    register_document_trash_routes(app, hub, project, source, data)
     register_planning_routes(app, hub, project, source)
     register_memory_routes(app, hub, project)
     register_tutor_routes(app, hub, project, source)
+    register_quick_chat_routes(app, hub, project, source)
     register_planner_routes(app, hub, project, source)
     # A switched-off feature has no routes at all: they answer 404 like any unknown address.
     if 'module_import' in features:
@@ -602,6 +633,8 @@ def create_app(source_root=None, data_dir=None, project_root=None, start_watch=T
         register_big_picture_routes(app, hub, project, source, data)
     if 'development' in features:
         register_development_routes(app, hub, project)
+        register_development_change_routes(app, project, data)
+        register_development_flow_routes(app, project)
     register_quality_routes(app, hub)
     if 'voice' in features:
         register_voice_routes(app)

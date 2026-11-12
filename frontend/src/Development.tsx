@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { api, errorText, formatDate } from './api';
 import { Badge, Button, Empty, ErrorBox, Field, Icon, Loading, PageTitle } from './components';
 import {
-  AppSettings, DevelopmentJob, DevelopmentOrder, DevelopmentOverview, DevelopmentRequest, DevelopmentStatus, DevelopmentSummary,
+  AppSettings, DevelopmentJob, DevelopmentOrder, DevelopmentOverview, DevelopmentProposal, DevelopmentRequest, DevelopmentStatus,
+  DevelopmentSummary,
 } from './types';
 import './development.css';
 
@@ -29,7 +30,7 @@ export function DevelopmentPage({ settings }: { settings: AppSettings | null }) 
     <PageTitle
       eyebrow="HUB WEITERENTWICKELN"
       title="Entwicklung"
-      description="Halte fest, was am Hub anders werden soll. Das KI-Modell arbeitet daraus einen Auftrag aus, der Hub stuft ihn ein und schreibt den Prompt für eine externe KI." />
+      description="Halte fest, was am Hub anders werden soll. Das KI-Modell arbeitet daraus einen Auftrag aus, der Hub stuft ihn ein und schreibt den Prompt für eine externe KI. Kleine Aufträge kann das lokale KI-Modell nach deiner Freigabe selbst umsetzen." />
     {settings === null ? <Loading /> : !settings.features.includes('development')
       ? <Empty icon="code" title="Diese Funktion ist ausgeschaltet">Der Bereich Entwicklung ist in diesem Hub nicht aktiv.</Empty>
       : <Workspace />}
@@ -42,7 +43,6 @@ function Workspace() {
   const [selected, setSelected] = useState('');
   const [detail, setDetail] = useState<DevelopmentRequest | null>(null);
   const [detailError, setDetailError] = useState('');
-  const [showClosed, setShowClosed] = useState(false);
   const [watch, setWatch] = useState(0);
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
@@ -111,24 +111,25 @@ function Workspace() {
 
   if (error && !overview) return <ErrorBox error={error} retry={refresh} />;
   if (!overview) return <Loading />;
-  const closedCount = overview.requests.filter(item => CLOSED.includes(item.status)).length;
-  const shown = overview.requests.filter(item => showClosed || !CLOSED.includes(item.status) || item.id === selected);
+  const open = overview.requests.filter(item => !CLOSED.includes(item.status));
+  const closed = overview.requests.filter(item => CLOSED.includes(item.status));
   return <>
     {error && <ErrorBox error={error} retry={refresh} />}
     <NewRequest onCreated={created} />
     <section className="card dev-step" aria-labelledby="dev-list-title">
       <div className="section-head">
         <h2 id="dev-list-title"><span className="dev-number">2</span> Anforderungen</h2>
-        {closedCount > 0 && <label className="dev-toggle">
-          <input type="checkbox" checked={showClosed} onChange={event => setShowClosed(event.target.checked)} />
-          <span>Umgesetzte und verworfene zeigen ({closedCount})</span>
-        </label>}
       </div>
       {overview.requests.length === 0
         ? <p className="muted">Noch keine Anforderungen. Schreib oben auf, was am Hub anders werden soll.</p>
-        : shown.length === 0
-          ? <p className="muted">Alle Anforderungen sind umgesetzt oder verworfen.</p>
-          : <RequestList requests={shown} selected={selected} job={overview.job} onSelect={setSelected} />}
+        : <>
+          <h3 className="dev-group">Offen ({open.length})</h3>
+          {open.length === 0 ? <p className="muted">Nichts offen.</p>
+            : <RequestList requests={open} selected={selected} job={overview.job} onSelect={setSelected} />}
+          <h3 className="dev-group">Abgeschlossen ({closed.length})</h3>
+          {closed.length === 0 ? <p className="muted">Noch nichts abgeschlossen.</p>
+            : <RequestList requests={closed} selected={selected} job={overview.job} onSelect={setSelected} />}
+        </>}
     </section>
     {selected && <section className="card dev-step" aria-labelledby="dev-detail-title">
       {detailError && <ErrorBox error={detailError} retry={() => loadDetail(selected)} />}
@@ -160,7 +161,7 @@ function NewRequest({ onCreated }: { onCreated: (request: DevelopmentRequest) =>
   };
   return <section className="card dev-step" aria-labelledby="dev-new-title">
     <h2 id="dev-new-title"><span className="dev-number">1</span> Neue Anforderung</h2>
-    <Field label="Was soll anders werden?" hint={`Beschreibe, was du erreichen willst und woran du merkst, dass es klappt. ${length} von ${TEXT_MAX} Zeichen.`}>
+    <Field label="Was soll anders werden?" hint={`Beschreibe in Worten, was du erreichen willst und woran du merkst, dass es klappt. Keinen Code einfügen – den schreibt später das KI-Modell. ${length} von ${TEXT_MAX} Zeichen.`}>
       <textarea rows={5} maxLength={TEXT_MAX} value={text} onChange={event => setText(event.target.value)}
         placeholder="Zum Beispiel: Im Lernchat soll unter jeder Antwort stehen, wie lange das KI-Modell dafür gebraucht hat." />
     </Field>
@@ -188,9 +189,12 @@ function RequestList({ requests, selected, job, onSelect }: {
           <span className="dev-row-title">{item.title}</span>
           <span className="dev-row-meta">
             {running && <Badge tone="yellow">KI-Modell arbeitet …</Badge>}
-            <Badge tone={STATUS[item.status].tone}>{STATUS[item.status].label}</Badge>
             {item.route && <Badge>{routeLabel(item.route)}</Badge>}
-            <span className="muted">{formatDate(item.created_at)}</span>
+            <span className="muted">{formatDate(item.updated_at)}</span>
+          </span>
+          <span className="dev-row-outcome">
+            <Badge tone={item.outcome.tone}>{item.outcome.label}</Badge>
+            {item.outcome.checks.filter(check => !check.ok).map(check => <span key={check.text} className="dev-row-open">✗ {check.text}</span>)}
           </span>
         </button>
       </li>;
@@ -210,6 +214,7 @@ function Detail({ request, overview, onChanged, onStarted }: {
   const job = overview.job;
   const running = job.state === 'running';
   const runningHere = running && job.request_id === request.id;
+  const draftingHere = runningHere && job.kind !== 'proposal';
   const order = request.order;
 
   const patch = async (value: Record<string, string>) => {
@@ -262,6 +267,7 @@ function Detail({ request, overview, onChanged, onStarted }: {
       </label>
     </div>
     {error && <ErrorBox error={error} />}
+    <Stand request={request} onChanged={onChanged} />
 
     <h3>Anforderung im Wortlaut</h3>
     <p className="dev-text">{request.text}</p>
@@ -275,12 +281,12 @@ function Detail({ request, overview, onChanged, onStarted }: {
 
     <h3>Auftrag</h3>
     {lock && <div className="alert warning" role="alert"><strong>Das KI-Modell steht nicht bereit.</strong><span>{lock}</span></div>}
-    {runningHere && <p className="dev-live" role="status" aria-live="polite">{job.message}</p>}
-    {running && !runningHere && <div className="alert info" role="status">Für {job.request_id} wird gerade ein Auftrag ausgearbeitet. Warte, bis er fertig ist.</div>}
-    {!runningHere && request.error && <div className="alert error" role="alert">
+    {draftingHere && <p className="dev-live" role="status" aria-live="polite">{job.message}</p>}
+    {running && !runningHere && <div className="alert info" role="status">Das KI-Modell arbeitet gerade an {job.request_id}. Warte, bis es fertig ist.</div>}
+    {!draftingHere && request.error && <div className="alert error" role="alert">
       <strong>Der letzte Versuch ist fehlgeschlagen.</strong><span>{request.error}</span>
     </div>}
-    {!order && !runningHere && <p className="muted">Noch kein Auftrag. Das KI-Modell sieht dafür die Anforderung, die Dateinamen des Programms und einen Auszug aus dem Architekturlog, aber keinen Quelltext und keine Lernunterlagen.</p>}
+    {!order && !draftingHere && <p className="muted">Noch kein Auftrag. Das KI-Modell sieht dafür die Anforderung, die Dateinamen des Programms und einen Auszug aus dem Architekturlog, aber keinen Quelltext und keine Lernunterlagen.</p>}
     {order && <Order order={order} busy={busy || running} onRoute={route => patch({ route })} />}
     <div className="button-row">
       <Button className={order ? 'secondary' : ''} onClick={draft} disabled={busy || running || !overview.model_available}>
@@ -288,6 +294,8 @@ function Detail({ request, overview, onChanged, onStarted }: {
       </Button>
       {order && <span className="muted">Ein neuer Auftrag ersetzt den bisherigen.</span>}
     </div>
+
+    {order && <Change request={request} order={order} job={job} modelAvailable={overview.model_available} onChanged={onChanged} onStarted={onStarted} />}
 
     <h3>Prompt für eine externe KI</h3>
     <p className="muted">Der Hub schreibt den Prompt selbst aus Anforderung, Auftrag und Projektregeln ({overview.rules_source}). Er enthält keine Lernunterlagen und verlässt den Hub erst, wenn du ihn kopierst.</p>
@@ -298,7 +306,44 @@ function Detail({ request, overview, onChanged, onStarted }: {
         <Button className="secondary" onClick={() => patch({ status: 'handed_over' })} disabled={busy}>Als übergeben markieren</Button>}
     </div>
     <p className="dev-live muted" role="status" aria-live="polite">{copied}</p>
+
+    <details className="dev-history">
+      <summary>Verlauf ({request.timeline.length})</summary>
+      <ol>{request.timeline.map((event, index) => <li key={`${event.at}-${index}`}>
+        <span className="muted">{formatDate(event.at)}</span> {event.text}
+      </li>)}</ol>
+    </details>
   </>;
+}
+
+function Stand({ request, onChanged }: { request: DevelopmentRequest; onChanged: (request: DevelopmentRequest) => void }) {
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState('');
+  const recheck = async () => {
+    setChecking(true);
+    setError('');
+    try {
+      onChanged(await api<DevelopmentRequest>(`/development/requests/${enc(request.id)}`));
+    } catch (problem) {
+      setError(errorText(problem));
+    } finally {
+      setChecking(false);
+    }
+  };
+  const { outcome } = request;
+  return <div className={`dev-stand ${outcome.tone}`} role="status">
+    <div className="dev-stand-head">
+      <strong>Stand:</strong> <Badge tone={outcome.tone}>{outcome.label}</Badge>
+      {outcome.checks.length > 0 && <Button className="secondary small" onClick={recheck} disabled={checking}>
+        <Icon name="refresh" size={14} /> {checking ? 'Prüft …' : 'Stand neu prüfen'}
+      </Button>}
+    </div>
+    {outcome.checks.length > 0 && <ul>{outcome.checks.map(check => <li key={check.text}>
+      <span className={check.ok ? 'dev-ok' : 'dev-open'}>{check.ok ? '✓' : '✗'}</span> {check.text}
+      {!check.ok && check.hint && <small>{check.hint}</small>}
+    </li>)}</ul>}
+    {error && <ErrorBox error={error} />}
+  </div>;
 }
 
 function Order({ order, busy, onRoute }: { order: DevelopmentOrder; busy: boolean; onRoute: (route: 'local' | 'external') => void }) {
@@ -313,7 +358,7 @@ function Order({ order, busy, onRoute }: { order: DevelopmentOrder; busy: boolea
         </Button>
       </div>
       {order.route_by === 'hub' && <ul>{order.route_reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>}
-      {order.route === 'local' && <p>Die Umsetzung durch das lokale KI-Modell ist noch nicht eingebaut. Setze die Änderung selbst um oder gib sie mit dem Prompt unten weiter.</p>}
+      {order.route === 'local' && <p>Unter „Umsetzung durch das lokale KI-Modell“ kannst du dir eine Änderung vorschlagen lassen und sie nach deiner Prüfung übernehmen. Du kannst den Auftrag auch mit dem Prompt weitergeben.</p>}
     </div>
     <h4>Ziel</h4>
     <p>{order.goal}</p>
@@ -349,5 +394,118 @@ function Order({ order, busy, onRoute }: { order: DevelopmentOrder; busy: boolea
       Entwurf: {order.generated_by}, {formatDate(order.created_at)}. Umfang laut KI-Modell: {order.size === 'gross' ? 'groß' : order.size}{order.reason ? ` (${order.reason})` : ''}.
       Das KI-Modell kannte nur die Dateinamen; prüfe den Auftrag, bevor du ihn weitergibst.
     </p>
+  </div>;
+}
+
+type ProposalAction = '' | '/apply' | '/discard' | '/revert';
+
+function Change({ request, order, job, modelAvailable, onChanged, onStarted }: {
+  request: DevelopmentRequest; order: DevelopmentOrder; job: DevelopmentJob; modelAvailable: boolean;
+  onChanged: (request: DevelopmentRequest) => void; onStarted: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const proposal = request.proposal || null;
+  const running = job.state === 'running';
+  const proposingHere = running && job.request_id === request.id && job.kind === 'proposal';
+  const local = order.route === 'local';
+
+  const call = async (action: ProposalAction) => {
+    setBusy(true);
+    setError('');
+    try {
+      const answer = await api<DevelopmentRequest | DevelopmentJob>(`/development/requests/${enc(request.id)}/proposal${action}`, {});
+      if (action === '') onStarted();
+      else onChanged(answer as DevelopmentRequest);
+    } catch (problem) {
+      setError(errorText(problem));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return <>
+    <h3>Umsetzung durch das lokale KI-Modell</h3>
+    {local
+      ? <p className="muted">Der Hub gibt dem lokalen KI-Modell den Inhalt der im Auftrag genannten Dateien, höchstens zwei. Das KI-Modell schlägt einzelne Ersetzungen vor, der Hub prüft sie. Geändert wird erst, wenn du den Vorschlag übernimmst. Der Quelltext bleibt auf diesem Mac.</p>
+      : <p className="muted">Das lokale KI-Modell setzt nur Aufträge um, die als „Lokal machbar“ eingestuft sind. Diesen Auftrag gibst du mit dem Prompt unten weiter.</p>}
+    {error && <ErrorBox error={error} />}
+    {proposingHere && <p className="dev-live" role="status" aria-live="polite">{job.message}</p>}
+    {!proposingHere && request.change_error && <div className="alert error" role="alert">
+      <strong>Der letzte Versuch ist fehlgeschlagen.</strong><span>{request.change_error}</span>
+    </div>}
+    {proposal && !proposingHere && <Proposal proposal={proposal} busy={busy || running} onAction={call} />}
+    {local && proposal?.state !== 'applied' && <div className="button-row">
+      <Button className={proposal?.state === 'open' ? 'secondary' : ''} onClick={() => call('')} disabled={busy || running || !modelAvailable}>
+        <Icon name={proposal ? 'refresh' : 'learn'} size={16} /> {proposal ? 'Änderung neu vorschlagen lassen' : 'Änderung vorschlagen lassen'}
+      </Button>
+      {proposal?.state === 'open' && <span className="muted">Ein neuer Vorschlag ersetzt den bisherigen.</span>}
+    </div>}
+  </>;
+}
+
+const PROPOSAL_STATE: Record<DevelopmentProposal['state'], { label: string; tone: 'neutral' | 'green' | 'yellow' | 'red' }> = {
+  open: { label: 'Wartet auf deine Freigabe', tone: 'yellow' },
+  applied: { label: 'Übernommen', tone: 'green' },
+  reverted: { label: 'Zurückgenommen', tone: 'neutral' },
+  discarded: { label: 'Verworfen', tone: 'red' },
+};
+
+function Proposal({ proposal, busy, onAction }: { proposal: DevelopmentProposal; busy: boolean; onAction: (action: ProposalAction) => void }) {
+  const accepted = proposal.edits.filter(edit => edit.ok).length;
+  const partial = accepted > 0 && accepted < proposal.edits.length;
+  const excerpted = proposal.files.filter(file => file.shown === 'excerpts').map(file => file.path);
+  return <div className="dev-proposal">
+    <div className="dev-proposal-head">
+      <strong>Vorschlag</strong>
+      <Badge tone={PROPOSAL_STATE[proposal.state].tone}>{PROPOSAL_STATE[proposal.state].label}</Badge>
+      <span className="muted">{proposal.generated_by}, {formatDate(proposal.created_at)}</span>
+    </div>
+    {proposal.question && <div className="alert info" role="status">
+      <strong>Rückfrage des KI-Modells</strong><span>{proposal.question}</span>
+      <span>Beantworte sie oben in der Ergänzung und lass die Änderung neu vorschlagen.</span>
+    </div>}
+    {excerpted.length > 0 && <p className="muted">Von {excerpted.join(' und ')} hat das KI-Modell nur Ausschnitte gesehen, weil die Datei zu groß für sein Kontextfenster ist.</p>}
+    {proposal.warnings.map(warning => <div className="alert warning" role="alert" key={warning}>{warning}</div>)}
+    {proposal.edits.length > 0 && <ol className="dev-edits">
+      {proposal.edits.map((edit, index) => <li key={index} className={edit.ok ? '' : 'is-refused'}>
+        <div className="dev-edit-head">
+          <code>{edit.path || 'ohne Datei'}</code>
+          {!edit.ok && <Badge tone="red">nicht übernehmbar</Badge>}
+        </div>
+        {edit.reason && <p>{edit.reason}</p>}
+        {!edit.ok && <p className="dev-dropped">{edit.problem}</p>}
+        <div className="dev-diff">
+          <div><span className="dev-diff-label">Bisher</span><pre>{edit.lead}<del>{edit.search}</del>{edit.tail}</pre></div>
+          <div><span className="dev-diff-label">Neu</span><pre>{edit.lead}<ins>{edit.replace}</ins>{edit.tail}</pre></div>
+        </div>
+      </li>)}
+    </ol>}
+    {proposal.state === 'open' && <>
+      {accepted === 0 && proposal.edits.length > 0 && <p className="muted">Keine Ersetzung lässt sich übernehmen. Lass die Änderung neu vorschlagen oder gib den Auftrag mit dem Prompt weiter.</p>}
+      {partial && <p className="muted">Übernommen werden nur die {accepted} Ersetzungen ohne Hinweis. Prüfe, ob die Änderung ohne die übrigen noch stimmt.</p>}
+      <div className="button-row">
+        {accepted > 0 && <Button onClick={() => onAction('/apply')} disabled={busy}><Icon name="check" size={16} /> {partial ? `${accepted} von ${proposal.edits.length} Ersetzungen übernehmen` : 'Übernehmen'}</Button>}
+        <Button className="secondary" onClick={() => onAction('/discard')} disabled={busy}>Verwerfen</Button>
+        {accepted > 0 && <span className="muted">Beim Übernehmen sichert der Hub die bisherigen Dateien und trägt die Änderung ins Änderungslog ein.</span>}
+      </div>
+    </>}
+    {proposal.state === 'applied' && <>
+      <div className="alert success" role="status">
+        <strong>Übernommen am {formatDate(proposal.applied_at)}.</strong>
+        {(proposal.effect || []).map(note => <span key={note}>{note}</span>)}
+        <span>Sicherung der bisherigen Dateien: <code>{proposal.backup}</code></span>
+        {proposal.logged === false && <span>Ins Änderungslog ließ sich nichts eintragen (logs/Aenderungslog.md fehlt oder ist nicht beschreibbar).</span>}
+      </div>
+      <div className="button-row">
+        <Button className="secondary" onClick={() => onAction('/revert')} disabled={busy}>Zurücknehmen</Button>
+        <span className="muted">Stellt die Dateien aus der Sicherung wieder her und setzt den Status auf „Auftrag liegt vor“.</span>
+      </div>
+    </>}
+    {proposal.state === 'reverted' && <div className="alert info" role="status">
+      <strong>Zurückgenommen am {formatDate(proposal.reverted_at)}.</strong>
+      <span>Die Dateien sind wieder auf dem Stand vor der Änderung.</span>
+      {(proposal.effect || []).map(note => <span key={note}>{note}</span>)}
+    </div>}
   </div>;
 }

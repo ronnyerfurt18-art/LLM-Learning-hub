@@ -5,6 +5,7 @@ import { Answer, Attempt, Module, Question, SourceImage } from './types';
 import { SourceDocumentLink, SourceLinks } from './SourceLinks';
 import { ModelAnswerBody } from './ModelAnswerBody';
 import { unitLabel as unitLabelOf } from './unitLabel';
+import { type PageContext, usePageDetail } from './pageContext';
 import './training-focus.css';
 import './practice.css';
 
@@ -117,9 +118,37 @@ export function LearningPage({modules,initialModule,initialUnit='',due=false}:{m
  </div>;
 }
 
+const clip=(value:string,limit:number)=>value.length>limit?`${value.slice(0,limit)} …`:value;
+function modelAnswerText(question:Question){
+ if(!question.model_answer_sections?.length)return question.model_answer||'';
+ return question.model_answer_sections.map(section=>[section.title,...(section.paragraphs||[]),...(section.entries||[]).map(entry=>`${entry.term}${entry.description?`: ${entry.description}`:''}`),...(section.items||[]).map(item=>`- ${item}`)].filter(Boolean).join('\n')).join('\n');
+}
+function ownAnswerText(question:Question,answer:Answer){
+ if(question.type==='single_choice'||question.type==='multiple_choice')return Array.isArray(answer)?(answer as number[]).map(index=>question.options?.[index]).filter(Boolean).join(' | '):'';
+ if(question.type==='matching'){const mapping=answer&&typeof answer==='object'&&!Array.isArray(answer)?answer as Record<string,string>:{};return Object.entries(mapping).filter(([,value])=>value).map(([term,value])=>`${term} → ${value}`).join(' | ');}
+ if(question.type==='cloze')return Array.isArray(answer)?(answer as string[]).join(' | '):'';
+ if(question.type==='flashcard')return '';
+ return typeof answer==='string'?answer:'';
+}
+/** What the "KI fragen" window may know about a training question; the model answer only once it is shown. */
+export function trainingContext(question:Question,answer:Answer,solved:Question|null,unitLabel:string):PageContext {
+ const lines=[`Aufgabe (${TYPES[question.type]||question.type}, ${unitLabel} ${question.unit}, Thema: ${question.topic}): ${question.question}`];
+ if(question.question_context)lines.push(`Kontext zur Aufgabe: ${clip(question.question_context,1200)}`);
+ if(question.options?.length)lines.push(`Antwortmöglichkeiten: ${question.options.join(' | ')}`);
+ const own=ownAnswerText(question,answer).trim();
+ if(question.type!=='flashcard')lines.push(`Eigene Antwort der lernenden Person: ${own?clip(own,1500):'(noch keine)'}`);
+ if(solved){
+  lines.push(`Musterantwort: ${clip(modelAnswerText(solved),1800)}`);
+  if(['single_choice','multiple_choice'].includes(solved.type)&&solved.correct_answers?.length)lines.push(`Richtige Antwortmöglichkeiten: ${solved.correct_answers.map(index=>solved.options?.[index]).filter(Boolean).join(' | ')}`);
+  if(solved.explanation)lines.push(`Erklärung: ${clip(solved.explanation,800)}`);
+ } else lines.push('Musterantwort: noch verdeckt – nicht verraten, nur Hinweise geben.');
+ return {key:`question:${question.id}`,module_id:question.module_id,title:`Frage: ${clip(question.question,100)}`,text:clip(lines.join('\n'),5900)};
+}
+
 export function TrainingQuestion({question,onNext,unitLabel='Einheit'}:{question:Question;onNext:(completed:boolean)=>void;unitLabel?:string}) {
  const [answer,setAnswer]=useState<Answer>(blankAnswer(question));const [result,setResult]=useState<Attempt|null>(null);const [saving,setSaving]=useState(false);const [error,setError]=useState('');const [rated,setRated]=useState(false);const [selfRating,setSelfRating]=useState<number|null>(null);
  const card=useRef<HTMLElement>(null);const revealed=!!result;
+ usePageDetail(trainingContext(question,answer,result?.question||(question.type==='flashcard'&&answer==='revealed'?question:null),unitLabel));
  useEffect(()=>{if(revealed&&card.current){card.current.scrollIntoView({block:'start',behavior:'instant'});}},[revealed]);
  const submit=async(rating?:number)=>{setSaving(true);setError('');try{const next=await api<Attempt>('/attempts',{question_id:question.id,answer,rating});setResult(next);if(rating!==undefined){setRated(true);setSelfRating(rating);}}catch(error){setError(errorText(error));}finally{setSaving(false);}};
  const rate=async(rating:number)=>{if(!result){await submit(rating);return;}setSaving(true);setError('');try{setResult(await api<Attempt>(`/attempts/${result.id}`,{manual_score:rating===0?0:rating===3?.5:1,rating},'PATCH'));setRated(true);setSelfRating(rating);}catch(error){setError(errorText(error));}finally{setSaving(false);}};

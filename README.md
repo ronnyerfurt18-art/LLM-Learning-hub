@@ -14,7 +14,10 @@ Lokale Lernplattform für Studium und Schule. Die Oberfläche läuft im Browser 
 - Lernplanung mit Terminen, Lernblöcken und Kalenderexport
 - Aufbereiten: Unterlagen in der Homepage hochladen; das lokale KI-Modell entwirft daraus je Einheit Lernseiten und Fragen und auf Wunsch ein Big Picture. Veröffentlicht wird erst nach deiner Prüfung
 - Qualitätsprüfung der KI-Antworten
-- Entwicklung: Anforderungen an den Hub festhalten; das lokale KI-Modell arbeitet einen Auftrag aus, der Hub stuft ihn ein und schreibt den Prompt für eine externe KI
+- Entwicklung: Anforderungen an den Hub im Chat-Fenster aufgeben; das lokale KI-Modell arbeitet den Auftrag aus und setzt kleine Änderungen nach deiner Freigabe um, der Hub baut, testet und meldet „erledigt“ oder „nicht erledigt“. Für größere Aufträge schreibt der Hub den Prompt für eine externe KI
+- „KI fragen“ auf jeder Seite: kleines Chat-Fenster, das die aktuelle Seite kennt (z. B. Aufgabe und eigene Antwort im Training)
+- Texterkennung (OCR) für gescannte PDFs, lokal; Abbildungen aus PDFs gehen bei „Länger nachdenken“ als Bild an das Modell
+- Dokumente entfernen über einen Papierkorb (nichts wird endgültig gelöscht)
 
 ## Voraussetzungen
 

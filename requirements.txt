@@ -5,3 +5,10 @@ fonttools==4.60.2
 python-docx==1.2.0
 python-pptx==1.0.2
 openpyxl==3.1.5
+pypdfium2==5.13.0
+pillow==11.3.0; python_version < "3.10"
+pillow==12.3.0; python_version >= "3.10"
+# Texterkennung (OCR) für gescannte PDFs; läuft lokal, Modelle liegen im Paket.
+rapidocr==3.10.0
+onnxruntime==1.19.2; python_version < "3.10"
+onnxruntime==1.23.2; python_version >= "3.10"

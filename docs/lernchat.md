@@ -55,3 +55,12 @@ Die OpenAI-Anbindung übergibt den Verlauf ausdrücklich im jeweiligen Aufruf un
 `backend/tutor_context.py` erstellt den lesenden Lernkontext. `backend/tutor.py` verwaltet Status, Eingabegrenzen und die vorbereiteten Provider. `frontend/src/LearningTutor.tsx` zeigt Auswahl, Vorschau, Entwurf und später Antworten an. Die Endpunkte sind `GET /api/tutor/status`, `GET /api/tutor/context` und `POST /api/tutor/chat`. Details stehen im [API-Vertrag](api-contract.md).
 
 Die Schnittstelle ist durch die bestehende lokale Host-/Origin-Prüfung geschützt. Es gibt keine zusätzlichen Pakete, MCP-Server, öffentlichen Ports oder Hintergrund-Modellaufrufe. Tests verwenden temporäre Datenbanken und simulierte Modellantworten; sie ersetzen keinen späteren Verbindungstest mit einem tatsächlichen Modellzugang.
+
+
+## 11.11.2026 – Lernchat wählt Belege passend zur Frage
+
+Der Modulchat sucht anhand der Fachbegriffe in der aktuellen Frage eine eindeutig passende Lernseite und daraus den am besten passenden Abschnitt. Bei Bezugnahmen wie „dazu“ oder „Abbildung 7“ zieht er frühere Nutzernachrichten für das Thema heran. Eine ausdrücklich gewählte Lernseite oder ein Lernziel bestimmt weiterhin den Bereich.
+
+Seiten- und Abbildungsangaben werden in den belegten PDF-Bereichen gesucht. Eine passende Seite erhält beim Zusammenstellen der Auszüge Vorrang. Abbildungsverzeichnisse werden dabei ausgespart. Mehrdeutige Treffer in mehreren PDFs führen zu keiner willkürlichen Priorisierung. Die Suche untersucht je Quellenbereich höchstens 20 Seiten.
+
+Unter „Zum Nachlesen“ stehen die Auszüge der jeweiligen Antwort. Die Vorschau zeigt den Ausgangskontext vor der Auswahl anhand der Frage. Das lokale Modell erhält Text und vorhandene Bildbeschriftungen.

@@ -4,7 +4,7 @@ Neue Module lassen sich mit dem lokal angebundenen Ollama-Modell aufbereiten. Au
 
 ## Ablauf
 
-In der Homepage führt die Seite „Aufbereiten“ durch dieselben Schritte: Unterlagen hochladen, Einheiten wählen, Vorschau, starten, veröffentlichen, Big Picture. Die Bedienung beschreibt `docs/inhalte-einbinden.md`. Im Terminal:
+In der Homepage führt die Seite „Aufbereiten“ durch dieselben Schritte: Modul wählen oder dort neu anlegen, Unterlagen hochladen, Einheiten wählen, Vorschau, starten, veröffentlichen, Big Picture. Die Bedienung beschreibt `docs/inhalte-einbinden.md`. Im Terminal:
 
 1. Modulordner im Studienordner ablegen und im Hub unter „Dokumente“ synchronisieren. Lehrbriefe brauchen eine Kurseinheit (wird aus Dateinamen wie `10001-02-S#1-…pdf` erkannt, sonst von Hand zuordnen).
 2. Vorschau ohne Modellaufruf: `.venv/bin/python tools/import_module.py --module 10001 --preview`
@@ -18,6 +18,10 @@ Dieselben Schritte stehen als API bereit (`GET /api/module-import/preview`, `POS
 
 - `GET /api/module-import/overview?module_id=…`: je Einheit die Dokumente (mit `usable` und Grund), Zahl der Entwurfs- und veröffentlichten Lernseiten. Es gelten dieselben Regeln wie in der Vorschau.
 - `POST /api/documents/upload?module_id=…&filename=…&unit=…`: legt eine weitere Unterlage ab (Dateiinhalt als roher Request-Body). Ziel ist der Modulordner, mit `unit` der Unterordner `Einheit <n>`. Höchstens 300 MB, nichts wird überschrieben (409), danach wird neu eingelesen.
+
+## Dokumentart
+
+Die Art einer Datei erkennt der Hub zuerst am Namen (z. B. „Klausur“ → Altklausur). Auf der Seite „Aufbereiten“ kann sie je Datei über „Art“ von Hand gesetzt werden; diese Wahl bleibt beim erneuten Einlesen erhalten. Aufbereitet werden Studienunterlagen, Folien und nicht eingeordnete PDFs (je Einheit die beste Art) und zusätzlich Klausuren, Übungen, Musterlösungen und Zusammenfassungen. Studienverwaltung, Prüfungshinweise und Einsendeaufgaben bleiben außen vor.
 
 ## Big Picture
 

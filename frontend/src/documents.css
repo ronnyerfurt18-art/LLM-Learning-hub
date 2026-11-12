@@ -1,0 +1,5 @@
+.document-state { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.document-state .badge { margin: 0; }
+.document-state .table-small { flex-basis: 100%; margin-top: 0; }
+.modal-actions .document-remove { margin-right: auto; color: var(--red); }
+.modal-actions .document-remove:disabled { opacity: .5; }

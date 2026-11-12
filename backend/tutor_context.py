@@ -307,19 +307,75 @@ def _selected_package(hub, project_root, source_root, module_id):
     packages, errors = load_learning_pages(project_root, source_root)
     modules = hub.modules()
     relevant = [error for error in errors
-                if error.get('module_number') and module_id_for_package(error, modules) == module_id]
+                if module_id_for_package(error, modules) == module_id]
     if relevant:
         raise ValueError('Lokale Lerninhalte sind ungültig: ' + '; '.join(relevant[0]['errors'][:20]))
     package = next((item for item in packages if module_id_for_package(item, modules) == module_id), None)
     if package is not None:
         return package
-    unknown = [error for error in errors if not error.get('module_number')]
+    unknown = [error for error in errors if not error.get('module_number') and not error.get('module_id')]
     if unknown:
         raise ValueError('Lokale Lerninhalte sind ungültig: ' + '; '.join(unknown[0]['errors'][:20]))
     raise KeyError('Für dieses Modul ist noch keine Lernpage vorhanden.')
 
 
-def _pdf_excerpts(sources, project_root, source_root, budget, query_terms=None):
+def _conversation_lesson(package, message, history):
+    """Resolve a topic from user words; assistant guesses never become retrieval evidence."""
+    queries = [message]
+    # History supplies the topic only for a short or explicitly referential follow-up.
+    if re.search(r"\b(abbildung|pdf.seite|dort|davon|dazu|damit|diese[rsn]?|vierte|weiter|warum)\b", message, re.I):
+        queries += [turn['content'] for turn in reversed(history) if turn['role'] == 'user']
+    for query in queries:
+        weights = _term_weights(query)
+        ranked = []
+        for lesson in package['lessons']:
+            title_terms = _terms(lesson['title'])
+            shared = title_terms & weights.keys()
+            score = sum(weights[term] for term in shared)
+            if score >= 3 or (len(shared) == 1 and len(title_terms) == 1):
+                ranked.append((score, lesson['id']))
+        ranked.sort(reverse=True)
+        if ranked and (len(ranked) == 1 or ranked[0][0] > ranked[1][0]):
+            return ranked[0][1]
+    return None
+
+
+def _requested_pages(refs, message):
+    """Locate an explicit page or figure inside the selected, validated source ranges."""
+    page_match = re.search(r"\b(?:PDF[ -]?)?Seite\s+(\d{1,5})\b", message, re.I)
+    figure_match = re.search(r"\b(?:Abbildung|Abb\.)\s*(\d{1,4})\b", message, re.I)
+    if not page_match and not figure_match:
+        return []
+    number = int(page_match[1]) if page_match else None
+    caption = re.compile(r"\b(?:Abbildung|Abb\.)\s*" + figure_match[1] + r"\s*[:.]", re.I) if figure_match else None
+    found, seen = [], set()
+    for ref, path in refs:
+        start, end = ref['pdf_page'], ref.get('pdf_page_end', ref['pdf_page'])
+        pages = [number] if number is not None and start <= number <= end else []
+        if number is None:
+            pages = range(start, min(end + 1, start + 20))
+        if not pages:
+            continue
+        try:
+            with path.open('rb') as stream:
+                reader = PdfReader(stream)
+                for page in pages:
+                    if (path, page) in seen or page > len(reader.pages):
+                        continue
+                    seen.add((path, page))
+                    text = reader.pages[page - 1].extract_text() or ''
+                    if caption and (not caption.search(text) or 'abbildungsverzeichnis' in text.casefold()):
+                        continue
+                    found.append((ref, path, page))
+        except (OSError, ValueError, RuntimeError, IndexError, KeyError, NotImplementedError, PyPdfError):
+            continue
+    # A bare page/figure number must not choose arbitrarily between different PDFs.
+    if len({path for _, path, _ in found}) > 1:
+        return []
+    return found[:MAX_PDF_PAGES]
+
+
+def _pdf_excerpts(sources, project_root, source_root, budget, query_terms=None, request_text="", collect=None):
     """Visit at most five explicitly cited pages, fairly across the cited PDFs.
 
     With query_terms (compact context for local models) long pages keep their matching
@@ -336,9 +392,13 @@ def _pdf_excerpts(sources, project_root, source_root, budget, query_terms=None):
             refs.append((ref, path))
         except (OSError, ValueError, RuntimeError):
             unavailable = True
-    plan, seen = [], set()
+    plan = _requested_pages(refs, request_text)
+    preferred = {(path, page) for _, path, page in plan}
+    seen = set(preferred)
     for offset in range(MAX_PDF_PAGES):
         for ref, path in refs:
+            if len(plan) >= MAX_PDF_PAGES:
+                break
             page = ref['pdf_page'] + offset
             key = (path, page)
             if page <= ref.get('pdf_page_end', ref['pdf_page']) and key not in seen:
@@ -359,6 +419,8 @@ def _pdf_excerpts(sources, project_root, source_root, budget, query_terms=None):
         for index, (ref, path, page) in enumerate(plan):
             # Share space across planned excerpts; never let one page consume all of it.
             page_budget = min(MAX_PDF_PAGE_CHARS, budget // (len(plan) - index))
+            if (path, page) in preferred:
+                page_budget = min(MAX_PDF_PAGE_CHARS, max(page_budget, budget - 500 * (len(plan) - index - 1)))
             header = f"\n\n[{ref['id']}] Original-PDF · PDF-Seite {page}\n"
             if page_budget < len(header) + len(_CUT) + 40:
                 truncated = True
@@ -381,6 +443,9 @@ def _pdf_excerpts(sources, project_root, source_root, budget, query_terms=None):
                 else:
                     extracted += 1
                     readable = True
+                    if collect is not None:
+                        # Readable cited page for the figure renderer (pdf_figures); paths stay server-side.
+                        collect.append({'id': ref['id'], 'path': path, 'page': page, 'text': text})
             except (OSError, ValueError, RuntimeError, IndexError, KeyError, NotImplementedError, PyPdfError):
                 unavailable = True
                 text = 'PDF-Text dieser belegten Seite konnte nicht gelesen werden. Das Original muss direkt geprüft werden.'
@@ -388,7 +453,7 @@ def _pdf_excerpts(sources, project_root, source_root, budget, query_terms=None):
             if len(text) > limit:
                 truncated = True
             focused = focused_text(text, query_terms, limit) if readable and query_terms else None
-            if focused is None and query_terms and readable:
+            if focused is None and query_terms and readable and len(text) > limit and (path, page) not in preferred:
                 # Nothing on this page matches the selection: keep only its beginning, leave room for others.
                 limit = min(limit, _UNMATCHED_PAGE_CHARS)
                 truncated = truncated or len(text) > limit
@@ -404,7 +469,7 @@ def _pdf_excerpts(sources, project_root, source_root, budget, query_terms=None):
 
 
 def build_tutor_context(hub, project_root, source_root, module_id, lesson_id=None,
-                        section_id=None, concept_id=None, max_chars=None, focus=''):
+                        section_id=None, concept_id=None, max_chars=None, focus='', message='', history=(), deep=False):
     """Return one validated selection with bounded material and stable citation IDs.
 
     A module overview is the default. A lesson can optionally be narrowed to one
@@ -424,6 +489,16 @@ def build_tutor_context(hub, project_root, source_root, module_id, lesson_id=Non
     if concept_id is not None and (lesson_id is not None or section_id is not None):
         raise ValueError('Genau einen Lernkontext wählen: Lernpage oder Big-Picture-Konzept.')
     package = _selected_package(hub, project_root, source_root, module_id)
+    automatic_lesson = None
+    if message and lesson_id is None and concept_id is None:
+        automatic_lesson = _conversation_lesson(package, message, history)
+        lesson_id = automatic_lesson
+        if automatic_lesson:
+            lesson = next(item for item in package['lessons'] if item['id'] == lesson_id)
+            weights = _term_weights(message)
+            section = max(lesson['sections'], key=lambda item:
+                          sum(weights[term] for term in _terms(item['title']) & weights.keys()))
+            section_id = section['id']
     overview = package['overview']
     curated = _CuratedContext()
     figures = []
@@ -503,10 +578,15 @@ def build_tutor_context(hub, project_root, source_root, module_id, lesson_id=Non
                 ', '.join(f"[{ref['id']}]" for ref in curated.sources) +
                 ' – jeweils nur, wenn die Aussage im Text genau dieser Quelle steht.') if curated.sources else ''
     total = MAX_CONTEXT_CHARS if not max_chars else max(MIN_LOCAL_CONTEXT_CHARS, min(MAX_CONTEXT_CHARS, int(max_chars)))
+    if deep:
+        # "Länger nachdenken": whole cited pages instead of matching passages, within the full budget.
+        total = MAX_CONTEXT_CHARS
     compact = total < MAX_CONTEXT_CHARS
-    query_terms = {**_term_weights(''.join(curated.parts)), **_term_weights(focus)} if compact else None
+    query_terms = {**_term_weights(''.join(curated.parts)), **_term_weights(focus + " " + message)} if compact else None
+    figure_pages = [] if deep else None
     excerpts, extracted, omitted, pdf_truncated, unavailable, page_texts = _pdf_excerpts(
-        curated.sources, project_root, source_root, max(0, total - len(base) - len(_END) - len(reminder)), query_terms)
+        curated.sources, project_root, source_root, max(0, total - len(base) - len(_END) - len(reminder)), query_terms,
+        request_text=message, collect=figure_pages)
     notice = 'Der Kontext enthält kuratierte Lerntexte'
     notice += f' und Textauszüge aus {extracted} belegten PDF-Seiten.' if extracted else '; aktuell ist kein Original-PDF-Text beigefügt.'
     notice += ' Bilder und MP4-Videos werden nicht ausgelesen. Video-Zeitmarken belegen die kuratierten Texte; eine spontane MP4-Transkription findet nicht statt.'
@@ -518,10 +598,14 @@ def build_tutor_context(hub, project_root, source_root, module_id, lesson_id=Non
         notice += ' Original-PDF-Auszüge sind auf fünf belegte Seiten begrenzt; weitere verlinkte Seiten sind nicht beigefügt.'
     if pdf_truncated:
         notice += ' PDF-Ausschnitte sind wegen des Textlimits gekürzt oder ausgelassen; Kürzungen sind markiert.'
+    if deep:
+        notice += ' Länger nachdenken: belegte PDF-Seiten sind vollständig (bis 4.500 Zeichen je Seite) beigefügt.'
     if compact:
         notice += ' Für das lokale Modell ist der Kontext kompakt: PDF-Seiten enthalten nur die zur Auswahl passenden Stellen.'
     if unavailable:
         notice += ' Einzelne belegte PDF-Seiten sind nicht als Text verfügbar; dafür muss das verlinkte Original geprüft werden.'
+    if automatic_lesson:
+        notice = 'Zur Frage ausgewählte Lernseite: ' + title + '. ' + notice
     context_text = base + excerpts + _END + reminder
     spans = {key: [{'pdf_page': item['pdf_page'],
                     'start': _utf16_index(context_text, len(base) + item['start']),
@@ -530,4 +614,7 @@ def build_tutor_context(hub, project_root, source_root, module_id, lesson_id=Non
     result.update(title=_short(title, 360), context_text=context_text,
                   sources=curated.sources, suggestions=suggestions, notice=notice,
                   excerpts=spans, figures=figures)
+    if figure_pages is not None:
+        # Internal only (holds file paths): tutor.py removes it before anything is returned to the browser.
+        result['figure_pages'] = figure_pages
     return result

@@ -31,12 +31,12 @@ class UnitLabelTests(unittest.TestCase):
         self.assertEqual(self.hub.module(second['id'])['unit_label'], 'Session')
         self.assertEqual(Hub(self.hub.path).module(first['id'])['unit_label'], 'Kapitel')
 
-    def test_unknown_label_is_rejected_without_changes(self):
+    def test_invalid_label_type_is_rejected_without_changes(self):
         module = self.hub.add_module({'name': 'Statistik'})
         with self.assertRaises(ValueError):
-            self.hub.patch_module(module['id'], {'unit_label': 'Abenteuer'})
+            self.hub.patch_module(module['id'], {'unit_label': ['Abenteuer']})
         with self.assertRaises(ValueError):
-            self.hub.add_module({'name': 'Neu', 'unit_label': 'Abenteuer'})
+            self.hub.add_module({'name': 'Neu', 'unit_label': ['Abenteuer']})
         self.assertEqual(self.hub.module(module['id'])['unit_label'], 'Einheit')
         self.assertEqual(len(self.hub.modules()), 1)
 

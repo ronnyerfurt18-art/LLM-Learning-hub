@@ -99,6 +99,7 @@ class LocalModel:
         self._thread = None
         self.state, self.message = 'starting', 'Das lokale Modell wird vorbereitet …'
         self.thinking = False
+        self.vision = False
 
     def snapshot(self):
         with self._lock:
@@ -124,6 +125,7 @@ class LocalModel:
         try:
             info = local_model_info(self.model, self.request)
             self.thinking = 'thinking' in info.get('capabilities', [])
+            self.vision = 'vision' in info.get('capabilities', [])
             payload = {'model': self.model, 'messages': [], 'stream': False,
                        'keep_alive': KEEP_ALIVE, 'options': {'num_ctx': CONTEXT_TOKENS}}
             if self.thinking:

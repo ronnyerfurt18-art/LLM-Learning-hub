@@ -151,8 +151,10 @@ def validate_learning_page(content, source_root, project_root):
     if type(content.get('schema_version')) is not int or content['schema_version'] != 1:
         fail('schema_version', 'muss 1 sein.')
     number = content.get('module_number')
-    if not isinstance(number, str) or not re.fullmatch(r'\d{5}', number):
-        fail('module_number', 'fünfstellige Modulnummer als Text benötigt.')
+    if number is not None and not isinstance(number, str):
+        fail('module_number', 'Modulkennung muss Text sein; sie darf leer bleiben.')
+    if 'module_id' in content:
+        text(content['module_id'], 'module_id')
     text(content.get('module_title'), 'module_title')
     overview = content.get('overview')
     picture = overview.get('big_picture') if isinstance(overview, dict) else None
@@ -327,7 +329,7 @@ def load_learning_pages(project_root, source_root):
         return packages, errors
     if not _within(directory.resolve(), project):
         return [], [{'file': 'content', 'module_number': None, 'errors': ['Lerninhalte liegen außerhalb der Anwendung.']}]
-    numbers = set()
+    identities = set()
     for file in sorted(directory.glob('*.json')):
         content = None
         try:
@@ -335,14 +337,16 @@ def load_learning_pages(project_root, source_root):
                 raise ValueError('Lernpaket liegt außerhalb des Inhaltsverzeichnisses.')
             content = json.loads(file.read_text(encoding='utf-8'))
             problems = validate_learning_page(content, source_root, project)
-            if isinstance(content, dict) and isinstance(content.get('module_number'), str):
-                number = content['module_number']
-                if number in numbers:
-                    problems.append('Mehr als ein Lernpaket für dieselbe Modulnummer.')
-                numbers.add(number)
+            if isinstance(content, dict):
+                identity = ('id', content.get('module_id')) if content.get('module_id') else ('number', content.get('module_number'))
+                if isinstance(identity[1], str) and identity[1]:
+                    if identity in identities:
+                        problems.append('Mehr als ein Lernpaket für dasselbe Modul.')
+                    identities.add(identity)
             if problems:
                 number = content.get('module_number') if isinstance(content, dict) else None
-                errors.append({'file': file.name, 'module_number': number if isinstance(number, str) else None, 'errors': problems})
+                errors.append({'file': file.name, 'module_number': number if isinstance(number, str) else None,
+                               'module_id': content.get('module_id') if isinstance(content, dict) else None, 'errors': problems})
             else:
                 packages.append(content)
         except (ValueError, OSError, RuntimeError) as exc:
@@ -351,10 +355,16 @@ def load_learning_pages(project_root, source_root):
 
 
 def module_id_for_package(package, modules):
-    """Follow existing module numbers, including modules with a manually assigned ID."""
+    """Use stable identity; unbound legacy files may match a number or an unambiguous title."""
+    if package.get('module_id'):
+        return next((module['id'] for module in modules if module['id'] == package['module_id']), None)
     number = package.get('module_number')
-    if not isinstance(number, str):
-        return None
+    if not isinstance(number, str) or not number:
+        title = package.get('module_title')
+        if not isinstance(title, str) or not title.strip():
+            return None
+        matches = [module for module in modules if module.get('name') == title]
+        return matches[0]['id'] if len(matches) == 1 else None
     matches = [module for module in modules if module.get('number') == number]
     if len(matches) == 1:
         return matches[0]['id']

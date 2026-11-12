@@ -317,7 +317,7 @@ class LearningPageTests(unittest.TestCase):
         self.write_page(name='bi-duplicate.json')
         response = self.client.get('/api/learning-pages')
         self.assertEqual(response.status_code, 422)
-        self.assertIn('dieselbe Modulnummer', response.json()['detail'])
+        self.assertIn('dasselbe Modul', response.json()['detail'])
         self.assertEqual(self.client.get(f'/api/learning-pages/{self.mid}').status_code, 422)
 
     def test_module_id_fallback_cannot_bind_a_different_module(self):
