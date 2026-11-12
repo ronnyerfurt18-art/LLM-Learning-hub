@@ -10,6 +10,7 @@ import { AnswerText, citedIds, sourcePosition } from './AnswerText';
 import { useTutorVoice, VoiceIcon } from './TutorVoice';
 import { AnswerReview } from './AnswerReview';
 import { SourceImages } from './Learning';
+import { TutorPerformance, type TutorPerformanceData } from './TutorPerformance';
 
 type TutorSource = SourceRef & { id: string };
 type Excerpt = { pdf_page: number; text: string };
@@ -43,9 +44,9 @@ type TutorContext = {
 };
 export type TutorScope = { module_id: string; lesson_id?: string; section_id?: string; concept_id?: string };
 type HistoryItem = { role: 'user' | 'assistant'; content: string };
-type Message = HistoryItem & { id: number; sources?: TutorSource[]; excerpts?: Record<string, Excerpt[]>; figures?: TutorFigure[]; notice?: string; responseSeconds?: number; firstTokenSeconds?: number; thinking?: string };
+type Message = HistoryItem & { id: number; sources?: TutorSource[]; excerpts?: Record<string, Excerpt[]>; figures?: TutorFigure[]; notice?: string; responseSeconds?: number; firstTokenSeconds?: number; thinking?: string; performance?: TutorPerformanceData | null };
 type ChatRequest = TutorScope & { goal_id?: string; message: string; history: HistoryItem[]; think?: boolean };
-type ChatResponse = { answer: string; sources: TutorSource[]; provider: string; model: string; notice: string; excerpts?: Record<string, Excerpt[]>; figures?: TutorFigure[] };
+type ChatResponse = { answer: string; sources: TutorSource[]; provider: string; model: string; notice: string; excerpts?: Record<string, Excerpt[]>; figures?: TutorFigure[]; performance?: TutorPerformanceData | null };
 type StreamEvent = { type: 'delta'; text: string } | { type: 'thinking'; text: string } | ({ type: 'done' } & ChatResponse) | { type: 'error'; status?: number; detail?: unknown };
 
 const learningStarts = [
@@ -111,7 +112,7 @@ async function streamChat(body: ChatRequest, signal: AbortSignal, onDelta: (text
         if (!event) continue;
         if (event.type === 'delta') onDelta(event.text);
         else if (event.type === 'thinking') onThinking(event.text);
-        else if (event.type === 'done') finished = { answer: event.answer, sources: event.sources, provider: event.provider, model: event.model, notice: event.notice, excerpts: event.excerpts, figures: event.figures };
+        else if (event.type === 'done') finished = { answer: event.answer, sources: event.sources, provider: event.provider, model: event.model, notice: event.notice, excerpts: event.excerpts, figures: event.figures, performance: event.performance };
         else throw new TutorRequestError(typeof event.detail === 'string' ? event.detail : 'Der Lernbegleiter konnte nicht antworten.', event.status || 502);
       }
       if (chunk.done) break;
@@ -142,6 +143,7 @@ function AssistantAnswer({ message, seconds }: { message: Message; seconds: (val
     {figures.length > 0 && <section className="tutor-figures" aria-label="Abbildungen aus den Unterlagen"><SourceImages images={figures} /></section>}
     {message.thinking && <details className="tutor-thinking"><summary>Überlegungen des Modells anzeigen (ungeprüft)</summary><p className="preserve-lines">{message.thinking}</p></details>}
     {message.responseSeconds !== undefined && <p className="tutor-notice tutor-meta">{message.thinking ? 'Mit Nachdenken · ' : ''}{message.firstTokenSeconds !== undefined ? `Antwortbeginn nach ${seconds(message.firstTokenSeconds)} · ` : ''}Antwortzeit: {seconds(message.responseSeconds)}</p>}
+    <TutorPerformance data={message.performance} arrival={message.firstTokenSeconds} />
     {cited.length ? <section className="tutor-reading" aria-label="Zum Nachlesen">
       <div className="tutor-reading-heading"><strong className="tutor-reading-title">Zum Nachlesen</strong><span>{cited.length} {cited.length === 1 ? 'Quelle' : 'Quellen'}</span></div>
       {cited.map(source => {
@@ -356,7 +358,7 @@ export function TutorWorkspace({ scope, moduleTitle }: { scope: TutorScope; modu
     try {
       const response = await streamChat(request, controller.signal, text => {
         if (!alive.current || controller.signal.aborted) return;
-        if (firstTokenAt.current === null) firstTokenAt.current = (performance.now() - startedAt.current) / 1000;
+        if (firstTokenAt.current === null && text.trim()) firstTokenAt.current = (performance.now() - startedAt.current) / 1000;
         setStreamText(previous => previous + text);
       }, text => {
         if (!alive.current || controller.signal.aborted) return;
@@ -370,7 +372,7 @@ export function TutorWorkspace({ scope, moduleTitle }: { scope: TutorScope; modu
       try { localStorage.setItem(timingKey, JSON.stringify(nextTimings)); setTimingSaved(true); } catch { setTimingSaved(false); }
       setMessages(previous => [...previous,
         { id: nextMessageId.current++, role: 'user', content: request.message },
-        { id: nextMessageId.current++, role: 'assistant', content: response.answer, responseSeconds, firstTokenSeconds: firstTokenAt.current ?? undefined, sources: response.sources, excerpts: response.excerpts, figures: response.figures, notice: response.notice, thinking: thinkingRef.current.trim() || undefined },
+        { id: nextMessageId.current++, role: 'assistant', content: response.answer, responseSeconds, firstTokenSeconds: firstTokenAt.current ?? undefined, sources: response.sources, excerpts: response.excerpts, figures: response.figures, notice: response.notice, thinking: thinkingRef.current.trim() || undefined, performance: response.performance },
       ]);
       setStreamText(''); setThinkText('');
       setActiveTurn(null);
@@ -411,7 +413,7 @@ export function TutorWorkspace({ scope, moduleTitle }: { scope: TutorScope; modu
         <p className="tutor-error">Der Modellzugang konnte nicht geprüft werden. {statusError}</p>
         <button className="text-button" onClick={() => setStatusVersion(value => value + 1)}>Erneut prüfen <Icon name="refresh" size={14} /></button>
       </> : status?.configured ? <>
-        {['ollama', 'bonsai'].includes(status.provider) && <label className="field"><span>Lokales Modell</span><select value={status.provider} disabled={sending || !!activeTurn || switchingModel || voice.busy} onChange={event => void switchModel(event.target.value)}><option value="ollama">Qwen · Ollama</option><option value="bonsai">Bonsai 2 27B · MLX</option></select></label>}
+        {['ollama', 'bonsai'].includes(status.provider) && <label className="field"><span>Lokales Modell</span><select value={status.provider} disabled={sending || switchingModel || voice.busy} onChange={event => void switchModel(event.target.value)}><option value="ollama">Qwen · Ollama</option><option value="bonsai">Bonsai 2 27B · MLX</option></select></label>}
         <div className="tutor-status-heading"><Badge tone={status.readiness === 'ready' ? 'teal' : undefined}>{['ollama', 'bonsai'].includes(status.provider) ? status.readiness === 'ready' ? 'Tutor bereit' : status.readiness === 'starting' ? 'Modell wird geladen' : 'Tutor nicht bereit' : 'Zugang eingerichtet'}</Badge>{status.model && <span>{status.model}</span>}</div>
         {(!['ollama', 'bonsai'].includes(status.provider) || status.readiness !== 'ready') && <p>{status.data_flow === 'cloud' ? 'Beim Senden werden der ausgewählte Lernkontext und die letzten passenden Nachrichten an den eingerichteten Cloud-Modellanbieter übermittelt.' : status.message}</p>}
         {status.readiness === 'error' && <button className="text-button" onClick={() => void retryModel()}>Modell erneut prüfen <Icon name="refresh" size={14} /></button>}

@@ -11,6 +11,7 @@ from pypdf import PdfReader
 from pypdf.errors import PyPdfError
 
 from .learning_pages import load_learning_pages, module_id_for_package, resolve_study_source
+from .pdf_text_cache import PAGE_TEXT_CACHE
 
 
 MAX_CONTEXT_CHARS = 24_000
@@ -431,12 +432,14 @@ def _pdf_excerpts(sources, project_root, source_root, budget, query_terms=None, 
                 current = resolve_study_source(source_root, project_root, ref['path'])
                 if current != path:
                     raise ValueError('Quelldatei hat sich während des Lesens geändert.')
-                if path not in readers:
-                    readers[path] = PdfReader(stack.enter_context(path.open('rb')))
-                reader = readers[path]
-                if reader.is_encrypted or page > len(reader.pages):
-                    raise ValueError('Belegte PDF-Seite ist nicht als Text verfügbar.')
-                text = _tidy_page(_clean(reader.pages[page - 1].extract_text() or ''))
+                def extract():
+                    if path not in readers:
+                        readers[path] = PdfReader(stack.enter_context(path.open('rb')))
+                    reader = readers[path]
+                    if reader.is_encrypted or page > len(reader.pages):
+                        raise ValueError('Belegte PDF-Seite ist nicht als Text verfügbar.')
+                    return reader.pages[page - 1].extract_text() or ''
+                text = _tidy_page(_clean(PAGE_TEXT_CACHE.get(path, page, extract)))
                 if not text:
                     unavailable = True
                     text = 'Kein auslesbarer Text auf dieser belegten Seite. Das Original muss direkt geprüft werden.'

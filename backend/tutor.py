@@ -9,6 +9,7 @@ import json
 import os
 import re
 import threading
+import time
 from typing import Optional
 from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
@@ -19,8 +20,9 @@ from fastapi.responses import StreamingResponse
 from .tutor_context import build_tutor_context, local_context_chars
 from .tutor_assignments import build_assignment_context, remember_question, select_question
 from .quality import annotate, check_tutor, record, remember_turn
-from .bonsai import BonsaiModel, StreamAdapter, MODEL as BONSAI_MODEL, MODEL_PATH as BONSAI_PATH, BASE as BONSAI_BASE, model_list as bonsai_model_list
+from .bonsai import BonsaiModel, BonsaiMemoryError, StreamAdapter, MEMORY_MESSAGE, memory_available, MODEL as BONSAI_MODEL, MODEL_PATH as BONSAI_PATH, BASE as BONSAI_BASE, model_list as bonsai_model_list
 from .local_model import LocalModel, CONTEXT_TOKENS, KEEP_ALIVE, local_model_info
+from .tutor_metrics import Stopwatch, bonsai_stats, memory_snapshot, ollama_stats, performance
 from . import pdf_figures
 
 
@@ -315,6 +317,9 @@ class TutorService:
                        'top_p': 0.95 if thinking else 0.8, 'top_k': 20,
                        'min_p': 0.05 if thinking else 0.0,
                        'presence_penalty': 0.0 if thinking else 1.5}
+            if stream:
+                # Token counts and timings arrive in a last chunk only when requested.
+                payload['stream_options'] = {'include_usage': True}
             endpoint = BONSAI_BASE + '/v1/chat/completions'
         else:
             payload = {'model': self.model,
@@ -336,7 +341,11 @@ class TutorService:
         if self.local:
             try:
                 if self.provider == 'bonsai':
-                    bonsai_model_list()
+                    if not memory_available():
+                        self.local.set('error', MEMORY_MESSAGE)
+                        raise HTTPException(503, MEMORY_MESSAGE)
+                    if not bonsai_model_list():
+                        raise ValueError('Bonsai wurde entladen.')
                 else:
                     local_model_info(self.model)
             except ValueError:
@@ -367,6 +376,7 @@ class TutorService:
         request, shortened = self._prepare(context, message, history, think=think, instructions=instructions, limits=limits)
         if not self._generation.acquire(blocking=False):
             raise HTTPException(429, BUSY_MESSAGE)
+        watch = Stopwatch()
         try:
             self._local_check()
             result = self._transport(request)
@@ -385,7 +395,23 @@ class TutorService:
         finished = self._finish(context, self._answer(result), shortened)
         if isinstance(result, dict) and result.get('done_reason') == 'length':
             finished['truncated'] = True
+        if self.provider in {'ollama', 'bonsai'}:
+            finished['performance'] = self._performance(context, watch, result)
         return finished
+
+    def _performance(self, context, watch, final):
+        """Measured values for the finished answer; measuring must never cost the learner the answer."""
+        try:
+            total = watch.elapsed()
+            final = final if isinstance(final, dict) else {}
+            stats = (bonsai_stats(final.get('usage'), final.get('timings')) if self.provider == 'bonsai'
+                     else ollama_stats(final))
+            memory = memory_snapshot(self.provider, self.model) if self.local else {}
+            record = performance(self.provider, self.model, watch, stats, memory, context.get('build_seconds'))
+            record['total_seconds'] = total  # exclude the diagnostic memory probes
+            return record
+        except Exception:
+            return None
 
     def _finish(self, context, answer, shortened):
         notice = context.get('notice', '')
@@ -426,6 +452,7 @@ class TutorService:
             yield _event({'type': 'error', 'status': 429, 'detail': BUSY_MESSAGE})
             return
         response = None
+        watch, final = Stopwatch(), {}
         try:
             try:
                 self._local_check()
@@ -456,6 +483,7 @@ class TutorService:
                     thought_length += len(thought)
                     if thought_length > MAX_THINKING_CHARS:
                         raise HTTPException(502, 'Das Nachdenken des Modells wurde zu lang. Bitte ohne „Gründlich nachdenken“ erneut senden.')
+                    watch.token(visible=False)
                     yield _event({'type': 'thinking', 'text': thought})
                 text = message.get('content') if isinstance(message, dict) and isinstance(message.get('content'), str) else ''
                 text = _CONTROL.sub('', text)
@@ -464,9 +492,11 @@ class TutorService:
                     if length > MAX_ASSISTANT_CHARS:
                         raise HTTPException(502, UNREADABLE_MESSAGE)
                     parts.append(text)
+                    watch.token(visible=bool(text.strip()))
                     yield _event({'type': 'delta', 'text': text})
                 if item.get('done') is True:
                     cut = item.get('done_reason') == 'length'
+                    final = item
                     break
             answer = ''.join(parts).strip()
             if not answer and thought_length:
@@ -476,8 +506,13 @@ class TutorService:
             result = self._finish(context, answer, shortened)
             if cut:
                 result['truncated'] = True
+            result['performance'] = self._performance(context, watch, final)
             # finish may persist the result (Lernwiki); it runs while the lock is held.
             yield _event({'type': 'done', **(finish(result) if finish else result)})
+        except BonsaiMemoryError as exc:
+            if self.local:
+                self.local.set('error', str(exc))
+            yield _event({'type': 'error', 'status': 503, 'detail': str(exc)})
         except HTTPException as exc:
             yield _event({'type': 'error', 'status': exc.status_code, 'detail': exc.detail})
         except (URLError, OSError, TimeoutError):
@@ -616,6 +651,13 @@ def register_tutor_routes(app, hub, project_root, source_root):
             raise HTTPException(400, str(exc))
         return {**result, 'instructions': TUTOR_INSTRUCTIONS, 'context_preamble': CONTEXT_PREAMBLE}
 
+    def timed_context(validated):
+        """The selected context plus the time the hub needed to build it (part of the wait before the first word)."""
+        started = time.perf_counter()
+        context = selected(validated)
+        context['build_seconds'] = time.perf_counter() - started
+        return context
+
     def checked(context, validated):
         """Compare the finished answer with what the hub knows; findings appear below the answer."""
         def apply(result):
@@ -662,11 +704,7 @@ def register_tutor_routes(app, hub, project_root, source_root):
             pending.replace(config_path)
             old.configured = False
             old.stop()
-            # Release Ollama's current weights before loading Bonsai on shared memory.
-            if old.provider == 'ollama' and provider == 'bonsai':
-                from .local_model import local_json
-                try: local_json('/api/generate', {'model': old.model, 'keep_alive': 0}, timeout=10)
-                except Exception: pass
+            # Ollama is shared with other apps; switching the hub must not unload their model.
             app.state.tutor = new
             new.start()
             return new.status()
@@ -698,7 +736,7 @@ def register_tutor_routes(app, hub, project_root, source_root):
             raise HTTPException(400, str(exc))
         service = app.state.tutor
         service.require_configured()
-        context = selected(validated)
+        context = timed_context(validated)
         return checked(context, validated)(service.chat(context, validated['message'], validated['history'], think=validated['think']))
 
     @app.post('/api/tutor/chat/stream')
@@ -710,7 +748,7 @@ def register_tutor_routes(app, hub, project_root, source_root):
             raise HTTPException(400, str(exc))
         service = app.state.tutor
         service.require_configured()
-        context = selected(validated)
+        context = timed_context(validated)
         events = service.stream_chat(context, validated['message'], validated['history'], think=validated['think'],
                                      finish=checked(context, validated))
         return StreamingResponse(events, media_type='application/x-ndjson',

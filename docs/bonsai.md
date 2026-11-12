@@ -11,13 +11,19 @@ Abhängigkeiten aus `scripts/requirements-mlx-vlm.txt`: mlx 0.32.3, mlx-vlm 0.7.
 Modell: `prism-ml/Ternary-Bonsai-2-27B-mlx-2bit`, Revision `24b5937a4a104a44f790b6ccbd0c79b6fabd4299`.
 Modellgewichte: 8.595.477.990 Bytes; SHA-256 `130de5925082c168b7866b2e91b52e44abbafc99017e3ca352b77b5b55a269ed`.
 
-Bonsai startet über das Hersteller-Skript mit dem nativen Hadamard-fähigen mlx-vlm-Lader. Kein generischer mlx-lm-Lader. Der Dienst bindet ausschließlich 127.0.0.1:8081. Bereits fremd belegte Ports werden nicht übernommen. Der Lernhub beendet nur seinen eigenen Bonsai-Prozess. Es erfolgt kein automatischer Modelldownload beim Seitenaufruf. Protokoll: `runtimes/bonsai-demo/logs/learning-hub.log`.
+Bonsai startet über das Hersteller-Skript mit dem nativen Hadamard-fähigen mlx-vlm-Lader. Der Dienst bindet ausschließlich 127.0.0.1:8081. Ein vorhandener Server wird anhand seines Listener-Prozesses, Python-Pfads, nativen Servermoduls, Modellpfads und seiner Loopback-Bindung geprüft. Passt er zur eingerichteten Laufzeit, verwendet der Hub ihn weiter. Nach einem Entladen lädt eine kurze lokale Anfrage das Modell erneut. Eine leere Modellliste wird als entladen erkannt. Unbekannte Laufzeiten werden abgelehnt. Der Lernhub beendet ausschließlich selbst gestartete Prozesse. Es erfolgt kein automatischer Modelldownload beim Seitenaufruf. Protokoll für selbst gestartete Server ist `runtimes/bonsai-demo/logs/learning-hub.log`.
 
 ## Chat und Nachdenken
 
 Texte werden ausschließlich lokal an `/v1/chat/completions` übertragen. SSE-Antworten werden in das bestehende Chatformat umgesetzt; reasoning_content wird getrennt als ungeprüfte Überlegung dargestellt. Thinking ist pro Anfrage optional, mit 2048 Token Denkbudget. Die vorhandenen Grenzen für Antwort und Lernkontext bleiben bestehen. Truncated streams oder finish_reason=length werden als Fehler behandelt und nicht als fertige Wiki-Antwort gespeichert. Der aktuelle Lernhub sendet nur Text, keine Bilder an Bonsai.
 
-Beim Wechsel zu Bonsai wird das bisherige Ollama-Modell aus dem Arbeitsspeicher entladen, aber nicht gelöscht. `ollama_model` in tutor.local.json bewahrt den bisherigen Namen. Ollama muss für die Rückkehr verfügbar sein. Beim Modellwechsel bleibt der aktuelle Chat erhalten; neue Antworten verwenden den gewählten Anbieter.
+Beim Wechsel zu Bonsai bleibt das bisherige Ollama-Modell für andere Apps verfügbar. `ollama_model` in tutor.local.json bewahrt den bisherigen Namen. Ollama muss für die Rückkehr verfügbar sein. Gleichzeitig geladene Modelle teilen sich den Arbeitsspeicher. Beim Modellwechsel bleibt der aktuelle Chat erhalten und neue Antworten verwenden den gewählten Anbieter.
+
+Vor dem Laden und vor einer Bonsai-Anfrage prüft der Hub die geladenen Ollama-Gewichte und den physischen Arbeitsspeicher. Er reserviert für Bonsai vorsorglich das 1,6-Fache seiner Gewichte sowie 4 GiB für das System. Reicht das geschätzte Budget bei parallel geladenen Modellen nicht aus, wartet das Laden mit einer sichtbaren Meldung. Nach Freigabe des anderen Modells läuft der Start automatisch weiter. Für eine zuvor abgewiesene Chat-Anfrage kann „Erneut prüfen“ genutzt werden. Die Abschätzung ersetzt keine genaue Messung der dynamischen GPU-Speicherbelegung. Ein tatsächlicher Metal-Speicherfehler im Antwortstream wird mit einer konkreten Speichermeldung angezeigt.
+
+## Wiederherstellung einer laufenden Installation
+
+Nach Übernahme der Serveränderungen den Hub neu starten und im Lernchat „Bonsai 2 27B · MLX“ auswählen. Ist Bonsai schon ausgewählt, lädt „Erneut prüfen“ das entladene Modell. Der Status wechselt währenddessen von „wird geladen“ zu „bereit“. Die Prüfung einer vorhandenen Laufzeit benötigt auf macOS lesenden Zugriff auf `lsof` und `ps`.
 
 ## Prüfung
 

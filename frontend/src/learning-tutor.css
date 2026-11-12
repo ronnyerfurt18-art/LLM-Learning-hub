@@ -259,3 +259,7 @@
   .tutor-chat-panel .tutor-message-user,.tutor-microphone{border:1px solid CanvasText}
 }
 .tutor-review{margin-top:10px}.tutor-review-result{margin-top:10px;padding:14px 16px;border:1px solid var(--border);border-radius:9px;background:var(--surface-alt);font-size:14px;line-height:1.65}.tutor-review-result ul{margin:8px 0 8px 18px;padding:0}.tutor-review-result p{margin:8px 0}.tutor-review-result .tutor-notice{margin-bottom:6px}
+.tutor-performance-values{font-size:12px;font-variant-numeric:tabular-nums}
+.tutor-performance-values>div{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 16px;padding:4px 0}
+.tutor-performance-values dt{color:var(--muted)}
+.tutor-performance-values dd{margin:0;overflow-wrap:anywhere}

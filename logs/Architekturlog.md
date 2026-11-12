@@ -1,5 +1,13 @@
 # Architekturlog – Master Learning Hub
 
+### 12.11.2026 – Gemeinsamen Modellspeicher vor Bonsai-Aufrufen prüfen
+
+Ollama wird von anderen Apps mitverwendet. Der Hub gibt deren Modelle beim Anbieterwechsel nicht frei. Stattdessen prüft er vorsorglich den Speicherbedarf und wartet bei knappem Budget vor dem Bonsai-Start. Eine erneute Prüfung vor der Generierung fängt Modelle ab, die nach dem Start hinzukommen. Ein verbleibendes Rennen zwischen Apps wird über einen ausdrücklich erkannten nativen Speicherfehler gemeldet. Die Speicherabschätzung ist bewusst als Schätzung dokumentiert.
+
+### 12.11.2026 – Vorhandene Bonsai-Laufzeit prüfen und weiterverwenden
+
+Die Prozessverantwortung bleibt getrennt von der Nutzung. Ein vorhandener Bonsai-Server darf nach Prüfung von Listener, eingerichtetem Python- und Modellpfad, Servermodul, Host und Port verwendet werden. Er wird dadurch nicht Eigentum des Hubs. Eine leere Modellliste bedeutet entladen und löst nach dem Start bzw. „Erneut prüfen“ eine kurze lokale Ladeanfrage aus. Beim Wechsel zu Bonsai bleibt Ollama für andere Apps verfügbar. Der gemeinsame Speicherverbrauch wird damit von den tatsächlich parallel verwendeten Apps bestimmt.
+
 Dieses Log hält fest, **wie der Hub aufgebaut ist und warum**. Einzelne Änderungen mit Sicherung und Rückweg stehen weiterhin im `Aenderungslog.md`; hierher gehören Aufbau, Grundsätze und Entscheidungen, die länger gelten. Neue Einträge kommen unten unter „Entscheidungen“ dazu; die Übersicht oben wird bei Bedarf fortgeschrieben.
 
 Stand der Übersicht: 11.11.2026.
@@ -200,3 +208,10 @@ SQLite (data/learning.sqlite3)     Inhaltsdateien (content/, imports/)     Studi
 - Die Übersicht je Einheit liest bei jedem Aufruf die Seitentexte aller Lehrbriefe; bei großen Modulen ist das langsam.
 - Hochgeladene Videos (`.mp4`) werden gespeichert, erscheinen aber nicht unter „Dokumente“.
 - Die Qualitätsprüfung deckt normale Lernseiten-Gespräche nur mit zwei Regeln ab; für den Planer gibt es keine Modellprüfung.
+
+
+### 12.11.2026 - Modellmessungen nach Freigabe des lokalen Zugriffs
+
+Der direkte Pilot verwendet drei unveränderte eingefrorene Prompts und je zwei Aufrufe auf Bonsai, Qwen 27B und Qwen 9B. Die Modelle liefen nacheinander; Bonsai wurde zwischen den Bloecken über seine API entladen, ohne den fremden Laufzeitprozess zu beenden. Der separate Hub auf Port 8011 verwendet ein SQLite-Backup und keinen Scanner.
+
+Entscheidung: Aus dem kleinen Geschwindigkeitsvergleich folgt kein automatischer Modellwechsel. Die erste Quellenprüfung zeigt bei allen Modellen Einschraenkungen. Promptstruktur, Standardmodell und PDF-Cache bleiben unverändert. Eine Regel, wonach jede andere Frage stets kalt wird, ist nicht durch die Messdaten gedeckt. Details: `docs/llm-live-pilot-2026-11-12.md`.

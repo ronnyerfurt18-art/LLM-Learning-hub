@@ -1,5 +1,23 @@
 # Änderungslog – Learning Hub (Rohfassung)
 
+## 12.11.2026 – Modellwechsel nach fehlgeschlagener Frage freigeben
+
+Der Modellschalter in `LearningTutor.tsx` war auch nach einer fehlgeschlagenen Anfrage durch den für Wiederholungen behaltenen Gesprächsbeitrag gesperrt. Er bleibt nun bei tatsächlich laufender Anfrage, Modellwechsel oder Sprachverarbeitung gesperrt. Nach einem Fehler kann das Modell gewechselt und dieselbe Frage erneut gesendet werden. Zwei Tests prüfen direkt den Sperrausdruck des verwendeten Auswahlfelds. Rückweg ist die Wiederherstellung der vorherigen Sperrbedingung und ein neuer Frontend-Build.
+
+## 12.11.2026 – Speicherprüfung für gleichzeitig verwendete Modelle
+
+Eine echte Tutorfrage brach bei parallel geladenem Qwen und Bonsai mit einem nativen Metal-Speicherfehler ab. Bonsai prüft nun vor Laden und Anfrage den geschätzten Speicherbedarf gegen die geladenen Ollama-Gewichte und den physischen Arbeitsspeicher. Der Start wartet bei einem Konflikt und läuft nach dessen Ende automatisch weiter. Fehler im Stream erhalten eine konkrete Speichermeldung und beenden den Statusmonitor, damit „Erneut prüfen“ erneut starten kann. Die Prüfung verwendet vorsorglich 1,6-fache Bonsai-Gewichte und 4 GiB Systemreserve. Die tatsächliche GPU-Belegung bleibt dynamisch.
+
+Betroffen sind `backend/bonsai.py`, `backend/tutor.py`, `tests/test_bonsai.py` und `docs/bonsai.md`. 58 gezielte Tests bestanden. Der vorherige vollständige Lauf ohne den separat bestätigten bestehenden OCR-Fehler ergab 501 bestandene Tests. Rückweg ist die gezielte Wiederherstellung aus der Sicherung vor dieser Übernahme.
+
+## 12.11.2026 – Bonsai nach Entladen wieder erreichbar
+
+Die leere Modellliste eines laufenden Bonsai-Servers wurde als fremdes Modell behandelt. Der Hub prüft jetzt den Listener und dessen Startbefehl gegen die konfigurierte native Laufzeit, verwendet einen passenden Server weiter und lädt das lokale Modell mit einer kurzen Anfrage. Er beendet weiterhin ausschließlich eigene Prozesse. Der Wechsel zu Bonsai entlädt das gemeinsam genutzte Ollama-Modell künftig nicht mehr. Neue Regressionstests decken entladene und unbekannte Server, Nachladen, Abbruch und den Wechsel mit gemeinsam genutztem Ollama ab.
+
+Betroffen sind `backend/bonsai.py`, `backend/tutor.py`, `tests/test_bonsai.py` und `docs/bonsai.md`. Rückweg ist die gezielte Wiederherstellung dieser Änderungen aus der Sicherung vor Übernahme. Vorherige Performance-Erweiterungen bleiben erhalten.
+
+Die geprüften Änderungen und die vorherigen Performance-Erweiterungen wurden mit Sicherung unter `data/backups/bonsai-deploy-20261112-183321/` in den privaten Hub übernommen. Dessen Konfiguration blieb dabei erhalten. Ein eigener lokaler Nachtlauf `tools/overnight_tutor_benchmark.py` sammelt den vollständigen Vergleich mit Zwischenständen, Leerlaufprüfungen, rotierender Modellreihenfolge und gepaarten Vorladeversuchen. Seine Ergebnisse liegen unter `data/benchmarks/2026-11-12-overnight/`. Rückweg für den Nachtlauf ist das Beenden seines eigenen Prozesses. Bereits gemessene Antworten bleiben erhalten.
+
 Die Rohfassung ist am 10.11.2026 aus dem privaten Master Learning Hub abgezweigt. Das Änderungslog des privaten Hubs bleibt dort.
 
 ---
@@ -117,3 +135,14 @@ Die Rohfassung ist am 10.11.2026 aus dem privaten Master Learning Hub abgezweigt
 **Übernahme vorhandener Inhalte aus einer älteren Fassung:** In jeder Einsendearbeit `module_number` und bei fester Form `rules` ergänzen; `imports/seed.json` mit den bisherigen Startpaketen anlegen; je Modul die Bezeichnung der Lerneinheiten wählen; in `tutor.local.json` Studienordner und Laufzeitordner eintragen.
 
 **Offen:** `install.sh` mit RAM-Profilen, Ollama-Adresse einstellbar, einheitliches Standardmodell, Modellbezeichnung „Qwen · Ollama“ im Lernchat, Messungen auf 16 GB.
+
+
+## 12.11.2026 - Live-Modellmessungen fortgesetzt
+
+**Was:** Zugriff auf die lokalen Laufzeiten geprüft; 18 Pilotantworten mit echten Token-/Cache-/Zeitwerten gespeichert. Separaten Hub mit Datenbankkopie für den vollständigen Anfrageweg gestartet. Ergebnisse und offene Abnahme in `docs/llm-live-pilot-2026-11-12.md`; bisherige Performance-Dokumente um aktuellen Status und eingeschraenkte Cache-Aussagen ergänzt. Keine weitere Änderung am Anwendungscode oder an der Standardmodellauswahl.
+
+**Warum:** Der vorherige Lauf war am Netzwerkzugriff gescheitert; Cache-Wirkung und Provider-Messwerte mussten im echten Betrieb geprüft werden.
+
+**Daten:** `data/benchmarks/2026-11-12-live-resume/` enthält Prompts, Rohantworten, Laufzeitübergaenge, Messskripte und Code-Prüfsummen. Bestehende Messungen wurden nicht überschrieben.
+
+**Rückweg:** Vorherige Dokumente sind in `data/benchmarks/2026-11-12-live-resume/docs-before.tar.gz` gesichert. Nur diese Dokumentationsfortsetzung zurücknehmen; vorherige uncommittierte Implementierungen beibehalten. Die Pilotmessungen ändern keine Lerninhalte.
